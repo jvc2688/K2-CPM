@@ -56,6 +56,12 @@ def load_data(tpf):
         time = hdu_data["time"]
         flux = hdu_data["flux"]
         flux_err = hdu_data["flux_err"]
+
+    length = time.shape[0]
+    time = time[length/2.:]
+    flux = flux[length/2.:]
+    flux_err = flux_err[length/2.:]
+    
     pixel_mask = get_pixel_mask(flux, kplr_mask)
     epoch_mask = get_epoch_mask(pixel_mask)
     flux = flux[:, kplr_mask>0]
@@ -71,6 +77,8 @@ def load_data(tpf):
         interMask = np.isfinite(flux[:,i])
         flux[~interMask,i] = np.interp(index[~interMask], index[interMask], flux[interMask,i]) #flux[~interMask,i] = np.interp(time[~interMask], time[interMask], flux[interMask,i])
         flux_err[~interMask,i] = np.inf
+
+
 
     return time, flux, pixel_mask, kplr_mask, epoch_mask, flux_err, column, row
 
@@ -179,7 +187,7 @@ def get_fit_matrix(kid, campaign, target_tpf, target_pixel, l2,  poly=0, auto=Fa
     predictor_mask = np.ones((flux.shape[1], flux.shape[2]))
     for i in range(flux.shape[1]):
         for j in range(flux.shape[2]):
-            if i in excl_x or j in excl_y:
+            if i in excl_x and j in excl_y:#if i in excl_x or j in excl_y:
                 predictor_mask[i,j] = 0
     predictor_mask = predictor_mask.flatten()
     predictor_flux_matrix = flux.reshape((flux.shape[0], -1))[:, predictor_mask>0]
@@ -443,6 +451,49 @@ def fit_target(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch
     for i in range(0, thread_num):
         os.remove('./%stmp%d.npy'%(prefix, i))
 
+def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask, covar_list, margin, l2_vector=None, thread_num=1, prefix="lightcurve", transit_mask=None):
+    """
+    ## inputs:
+    - `target_flux` - target flux
+    - `target_kplr_mask` - kepler mask of the target star
+    - `neighbor_flux_matrix` - fitting matrix of neighbor flux
+    - `time` - array of time 
+    - `epoch_mask` - epoch mask
+    - `covar_list` - covariance list
+    - `margin` - size of the test region
+    - `poly` - number of orders of polynomials of time(zero order is the constant level)
+    - `l2_vector` - array of L2 regularization strength
+    - `thread_num` - thread number
+    - `prefix` - output file's prefix
+    
+    ## outputs:
+    - prefix.npy file - fitting fluxes of pixels
+    """
+    filename = "./%s"%prefix
+    dir = os.path.dirname(filename)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    f = h5py.File('%s.hdf5'%prefix, 'a')
+    cpm_info = f['/cpm_info']
+    data_group = f['/data']
+    cpm_info['margin'] = margin
+    
+    print covar_list.shape
+    covar = covar_list**2
+    fit_flux = []
+    fit_coe = []
+    length = target_flux.shape[0]
+    total_length = epoch_mask.shape[0]
+    
+    thread_len = total_length//thread_num
+    last_len = total_length - (thread_num-1)*thread_len
+    
+    result = lss.linear_least_squares(predictor_flux_matrix, target_flux, covar, l2_vector)
+    fit_flux = np.dot(predictor_flux_matrix, result)
+    data_group['fit_flux'] = fit_flux
+    f.close()
+
+
 def pixel_plot(time, flux, name, size=None):
     shape = flux.shape
     if size==None:
@@ -482,7 +533,38 @@ if __name__ == "__main__":
         plt.show()
         pixel_plot(time, flux, 'ktwo200000862-c00_lpd-targ', [[20,25],[20,25]])
 
+#train adn test
     if False:
+        kid = 200000862
+        campaign = 0
+        l2 = 1e5
+        auto_l2 = 0
+        auto = False
+        poly = 0
+        auto_offset = 18
+        auto_window = 3
+        margin = 12
+        thread_num = 3
+        part = None
+        target_list = [[26,12], [26,14], [28,12], [28,13], [28,14],[25,12],[25,13],[25,14],[35,27], [35,28], [35,26], [34,27], [34,28], [34,26], [36,27], [36,28], [36,26]]
+        target_pixel = [27,12]#[25,15]
+
+        for x in range(41,46):
+            for y in range(37,42):
+                target_pixel = [x,y]
+                prefix = '../hdf5/cut/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
+
+                tpf = '../data/ktwo200000862-c00_lpd-targ.fits'
+
+                predictor_flux_matrix, target_flux, covar_list, time, target_kplr_mask, epoch_mask, data_mask, l2_vector, predictor_num, auto_pixel_num = get_fit_matrix(kid, campaign, tpf, target_pixel, l2, poly, auto, auto_offset, auto_window, auto_l2, part, False, prefix)
+
+                transit_mask = None
+
+                fit_target(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask[data_mask>0], covar_list, margin, l2_vector, thread_num, prefix, transit_mask)
+
+
+#no train adn test
+    if True:
         kid = 200000862
         campaign = 0
         l2 = 1e5
@@ -497,10 +579,10 @@ if __name__ == "__main__":
         target_list = [[26,12], [26,14], [28,12], [28,13], [28,14],[25,12],[25,13],[25,14],[35,27], [35,28], [35,26], [34,27], [34,28], [34,26], [36,27], [36,28], [36,26]]
         target_pixel = [27,12]#[25,15]
 
-        for x in range(36,37):
-            for y in range(26,28):
+        for x in range(0,50):
+            for y in range(0,50):
                 target_pixel = [x,y]
-                prefix = '../hdf5/ktwo%d_c%d_pixel(%d,%d)_%.0e_m%d'%(kid, campaign, target_pixel[0], target_pixel[1], l2, margin)
+                prefix = '../hdf5/notrain/row/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
 
                 tpf = '../data/ktwo200000862-c00_lpd-targ.fits'
 
@@ -508,9 +590,11 @@ if __name__ == "__main__":
 
                 transit_mask = None
 
-                fit_target(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask[data_mask>0], covar_list, margin, l2_vector, thread_num, prefix, transit_mask)
+                fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask[data_mask>0], covar_list, margin, l2_vector, thread_num, prefix, transit_mask)
 
-    if True:
+
+#train and test 
+    if False:
         kid = 200000862
         campaign = 0
         l2 = 1e5
@@ -524,11 +608,11 @@ if __name__ == "__main__":
         part = None
         target_pixel = [27,14]#[25,15]
 
-        for i in range(34,38):
-            for j in range(25,29):
+        for i in range(41,46):
+            for j in range(37,42):
                 target_pixel = [i,j]
 
-                prefix = '../hdf5/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
+                prefix = '../hdf5/cut/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
 
 
                 f = h5py.File('%s.hdf5'%prefix, 'r')
@@ -564,7 +648,7 @@ if __name__ == "__main__":
                 plt.subplots_adjust(left=None, bottom=None, right=None, top=None,
                                 wspace=0, hspace=0)
                 plt.suptitle('ktwo%d_c0%d pixel (%d, %d)'%(kid, campaign, target_pixel[0], target_pixel[1]))
-                plt.savefig('../plots/ktwo%d_c%d_pixel(%d,%d)_%.0e_res.png'%(kid, campaign, target_pixel[0], target_pixel[1], l2), dpi=190)
+                plt.savefig('../plots/cut/ktwo%d_c%d_pixel(%d,%d)_%.0e_res.png'%(kid, campaign, target_pixel[0], target_pixel[1], l2), dpi=190)
 
                 '''
                 f, axes = plt.subplots(2, 1)
@@ -584,6 +668,7 @@ if __name__ == "__main__":
                 plt.savefig('%s_ratio.png'%prefix, dpi=190)
                 '''
 
+#no train and test
     if False:
         kid = 200000862
         campaign = 0
@@ -598,7 +683,88 @@ if __name__ == "__main__":
         part = None
         target_pixel = [27,14]#[25,15]
 
-        prefix = '../hdf5/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
+        for i in range(0,50):
+            for j in range(0,50):
+                target_pixel = [i,j]
+
+                prefix = '../hdf5/notrain/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
+
+
+                f = h5py.File('%s.hdf5'%prefix, 'r')
+                cpm_info = f['/cpm_info']
+                data_group = f['/data']
+                
+                kid = f.attrs['kid'][()]
+                quarter = f.attrs['campaign'][()]
+                target_flux = data_group['target_flux'][:]
+                target_kplr_mask = data_group['target_kplr_mask'][:,:]
+                epoch_mask = data_group['epoch_mask'][:]
+                data_mask = data_group['data_mask'][:]
+                time = data_group['time'][:]
+                fit_flux = data_group['fit_flux']
+
+                print fit_flux.shape
+                print target_flux.shape
+                res = (target_flux-fit_flux[:,0])
+                res_rms = np.sqrt(np.median(res**2))
+                print res.shape
+
+                frame, axes = plt.subplots(2, 1)
+                axes[0].plot(time, target_flux, '.k')
+                axes[0].plot(time, fit_flux, '-r', linewidth=0.5)
+                #axes[3].legend(loc=1, ncol=3, prop={'size':8})
+                axes[0].set_ylabel("flux")
+                plt.setp( axes[0].get_xticklabels(), visible=False)
+                axes[1].plot(time, res, '.k')
+                axes[1].set_ylabel("residual")
+                axes[1].set_xlabel("time [BKJD]")
+                axes[1].axhline(y=0,xmin=0,xmax=5, ls='--', c="r",linewidth=1,zorder=10, alpha=0.25)
+                axes[1].axhline(y=res_rms,xmin=0,xmax=5, ls='--', c="r",linewidth=1,zorder=10, alpha=0.25)
+                axes[1].axhline(y=-res_rms,xmin=0,xmax=5, ls='--', c="r",linewidth=1,zorder=10, alpha=0.25)
+                axes[1].set_ylim(-res_rms*14, res_rms*14)
+                plt.tight_layout()
+                plt.subplots_adjust(left=None, bottom=None, right=None, top=None,
+                                wspace=0, hspace=0)
+                plt.suptitle('ktwo%d_c0%d pixel (%d, %d)'%(kid, campaign, target_pixel[0], target_pixel[1]))
+                plt.savefig('../plots/notrain/ktwo%d_c%d_pixel(%d,%d)_%.0e_res.png'%(kid, campaign, target_pixel[0], target_pixel[1], l2), dpi=190)
+
+
+                '''
+                f, axes = plt.subplots(2, 1)
+                axes[0].plot(time, (target_flux/median-1.)*10**6, '.k')
+                axes[0].plot(time, (fit_flux/median-1.)*10**6, '-r', linewidth=0.5)
+                #axes[3].legend(loc=1, ncol=3, prop={'size':8})
+                axes[0].set_ylabel("relative flux [ppm]")
+                plt.setp( axes[0].get_xticklabels(), visible=False)
+                axes[1].plot(time, (target_flux/fit_flux-1.)*10**6, '.k')
+                axes[1].set_ylabel("cpm flux [ppm]")
+                axes[1].set_xlabel("time [BKJD]")
+                axes[1].set_ylim(-9999, 9900)
+                plt.subplots_adjust(left=None, bottom=None, right=None, top=None,
+                                wspace=0, hspace=0)
+
+                plt.suptitle('ktwo%d_c0%d pixel (%d, %d)'%(kid, campaign, target_pixel[0], target_pixel[1]))
+                plt.savefig('%s_ratio.png'%prefix, dpi=190)
+                '''
+
+                f.close()
+
+
+    if False:
+        kid = 200000862
+        campaign = 0
+        l2 = 1e5
+        auto_l2 = 0
+        auto = False
+        poly = 0
+        auto_offset = 18
+        auto_window = 3
+        margin = 18
+        thread_num = 2
+        part = None
+        target_pixel = [41,37]#[25,15]
+
+        prefix = '../hdf5/cut/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
         f = h5py.File('%s.hdf5'%prefix, 'r')
         data_group = f['/data']
         epoch_mask = data_group['epoch_mask'][:]
@@ -606,16 +772,17 @@ if __name__ == "__main__":
 
         length = epoch_mask.shape[0]
 
-        image = np.zeros((length,4,4))
-        image_data = np.zeros((length,4,4))
-        image_ratio = np.zeros((length,4,4))
-        x0 = 34
-        y0 = 25
-        for i in range(34,38):
-            for j in range(25,29):
+        image_size = 5
+        image = np.zeros((length,image_size,image_size))
+        image_data = np.zeros((length,image_size,image_size))
+        image_ratio = np.zeros((length,image_size,image_size))
+        x0 = 41
+        y0 = 37
+        for i in range(41,46):
+            for j in range(37,42):
                 target_pixel = [i,j]
 
-                prefix = '../hdf5/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
+                prefix = '../hdf5/cut/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
 
 
                 f = h5py.File('%s.hdf5'%prefix, 'r')
@@ -642,9 +809,74 @@ if __name__ == "__main__":
                 image_data[:,i-x0,j-y0][epoch_mask>0] = target_flux
 
 
-        np.save('../hdf5/ktwo%d_c%d_p(%d,%d)_pre.npy'%(kid, campaign, x0, y0), image)
-        np.save('../hdf5/ktwo%d_c%d_p(%d,%d)_dif_res.npy'%(kid, campaign, x0, y0), image_ratio)
-        np.save('../hdf5/ktwo%d_c%d_p(%d,%d)_data.npy'%(kid, campaign, x0, y0), image_data)
+        np.save('../hdf5/cut/ktwo%d_c%d_p(%d,%d)_pre.npy'%(kid, campaign, x0, y0), image)
+        np.save('../hdf5/cut/ktwo%d_c%d_p(%d,%d)_dif_res.npy'%(kid, campaign, x0, y0), image_ratio)
+        np.save('../hdf5/cut/ktwo%d_c%d_p(%d,%d)_data.npy'%(kid, campaign, x0, y0), image_data)
+
+#no train
+    if False:
+        kid = 200000862
+        campaign = 0
+        l2 = 1e5
+        auto_l2 = 0
+        auto = False
+        poly = 0
+        auto_offset = 18
+        auto_window = 3
+        margin = 18
+        thread_num = 2
+        part = None
+        target_pixel = [27,14]#[25,15]
+
+        prefix = '../hdf5/notrain/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
+        f = h5py.File('%s.hdf5'%prefix, 'r')
+        data_group = f['/data']
+        epoch_mask = data_group['epoch_mask'][:]
+        f.close()
+
+        length = epoch_mask.shape[0]
+
+        image = np.zeros((length,5,5))
+        image_data = np.zeros((length,5,5))
+        image_ratio = np.zeros((length,5,5))
+        x0 = 0
+        y0 = 0
+        for i in range(42,47):
+            for j in range(38,43):
+                target_pixel = [i,j]
+
+                prefix = '../hdf5/notrain/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
+
+
+                f = h5py.File('%s.hdf5'%prefix, 'r')
+                cpm_info = f['/cpm_info']
+                data_group = f['/data']
+                
+                kid = f.attrs['kid'][()]
+                quarter = f.attrs['campaign'][()]
+                target_flux = data_group['target_flux'][:]
+                target_kplr_mask = data_group['target_kplr_mask'][:,:]
+                epoch_mask = data_group['epoch_mask'][:]
+                data_mask = data_group['data_mask'][:]
+                time = data_group['time'][:]
+                fit_flux = data_group['fit_flux'][:,0]
+
+                ratio = (target_flux/fit_flux-1.)*10**6
+                res_rms = np.sqrt(np.median(ratio**2))
+
+                res = (target_flux-fit_flux)
+                res_rms = np.sqrt(np.median(res**2))
+
+
+                image[:,i-42,j-38][epoch_mask>0] = fit_flux
+                image_ratio[:,i-42,j-38][epoch_mask>0] = res
+                image_data[:,i-42,j-38][epoch_mask>0] = target_flux
+
+                f.close()
+
+        np.save('../hdf5/notrain/v1_ktwo%d_c%d_p(%d,%d)_pre.npy'%(kid, campaign, x0, y0), image)
+        np.save('../hdf5/notrain/v1_ktwo%d_c%d_p(%d,%d)_dif_res.npy'%(kid, campaign, x0, y0), image_ratio)
+        np.save('../hdf5/notrain/v1_ktwo%d_c%d_p(%d,%d)_data.npy'%(kid, campaign, x0, y0), image_data)
 
     #movie
     if False:
@@ -659,13 +891,13 @@ if __name__ == "__main__":
         margin = 18
         thread_num = 2
         part = None
-        x0 = 34
-        y0 = 25
+        x0 = 41
+        y0 = 37
         dir_list = ['data', 'pre', 'dif_res']
         #dir_list = [ 'dif']
 
         for direc in dir_list: 
-            filename = '../movie/ktwo%d_c%d_p(%d,%d)/new/frame.png'%(kid, campaign, x0, y0)
+            filename = '../movie/cut/ktwo%d_c%d_p(%d,%d)/new/frame.png'%(kid, campaign, x0, y0)
             dir = os.path.dirname(filename)
             if not os.path.exists(dir):
                 os.makedirs(dir)
@@ -675,7 +907,8 @@ if __name__ == "__main__":
         i=0
         limit=[0,0]
         for direc in dir_list:
-            flux = np.load('../hdf5/ktwo%d_c%d_p(%d,%d)_%s.npy'%(kid, campaign, x0, y0, direc))
+            flux = np.load('../hdf5/cut/ktwo%d_c%d_p(%d,%d)_%s.npy'%(kid, campaign, x0, y0, direc))
+            '''
             rms = np.sqrt(np.median(flux**2, axis=0))
             rms = np.max(rms)
             if i==2:
@@ -685,13 +918,29 @@ if __name__ == "__main__":
             elif i==0:
                 limit[0] = np.min(flux)
                 limit[1] = np.max(flux)
+            '''
+            rms = np.sqrt(np.median(flux**2, axis=0))
+
+            rms = np.percentile(rms, 95)#np.max(rms)
+            if i==2:
+                limit=[0,0]
+                if 10*rms > np.percentile(flux, 99):
+                    limit[0] = -np.percentile(flux, 99)
+                    limit[1] = np.percentile(flux, 99)
+                else:
+                    limit[0] = -10*rms
+                    limit[1] = 10*rms
+            elif i==0:
+                limit[0] = np.min(flux)
+                limit[1] = np.percentile(flux, 95)#np.max(flux)
+
             num_frames = flux.shape[0]
             fluxes.append((flux, limit, titles[i]))
             i+=1
         print num_frames
         fig = plt.gcf()
         fig.set_size_inches(12.9,3)
-        for i in range(2000, num_frames):
+        for i in range(0, num_frames):
             j=1
             for flux,limit,title in fluxes:
                 ax = plt.subplot(130+j)
@@ -707,7 +956,79 @@ if __name__ == "__main__":
                 ax.get_xaxis().set_visible(False)
                 ax.get_yaxis().set_visible(False)
 
-            fname = '../movie/ktwo%d_c%d_p(%d,%d)/new/_tmp%04d.png' %(kid, campaign, x0, y0, i)
+            fname = '../movie/cut/ktwo%d_c%d_p(%d,%d)/new/_tmp%04d.png' %(kid, campaign, x0, y0, i)
+            print('Saving frame', fname)
+            plt.savefig(fname)
+            plt.clf()
+
+
+#movie no train 
+    if False:
+        kid = 200000862
+        campaign = 0
+        l2 = 1e5
+        auto_l2 = 0
+        auto = False
+        poly = 0
+        auto_offset = 18
+        auto_window = 3
+        margin = 18
+        thread_num = 2
+        part = None
+        x0 = 0
+        y0 = 0
+        dir_list = ['data', 'pre', 'dif_res']
+        #dir_list = [ 'dif']
+
+        for direc in dir_list: 
+            filename = '../movie/notrain/v1_ktwo%d_c%d_p(%d,%d)/new/frame.png'%(kid, campaign, x0, y0)
+            dir = os.path.dirname(filename)
+            if not os.path.exists(dir):
+                os.makedirs(dir)
+
+        fluxes=[]
+        titles = ['data', 'prediction', 'difference']
+        i=0
+        limit=[0,0]
+        for direc in dir_list:
+            flux = np.load('../hdf5/notrain/v1_ktwo%d_c%d_p(%d,%d)_%s.npy'%(kid, campaign, x0, y0, direc))
+            rms = np.sqrt(np.median(flux**2, axis=0))
+
+            rms = np.percentile(rms, 95)#np.max(rms)
+            if i==2:
+                limit=[0,0]
+                if 10*rms > np.percentile(flux, 99):
+                    limit[0] = -np.percentile(flux, 99)
+                    limit[1] = np.percentile(flux, 99)
+                else:
+                    limit[0] = -10*rms
+                    limit[1] = 10*rms
+            elif i==0:
+                limit[0] = np.min(flux)
+                limit[1] = np.percentile(flux, 95)#np.max(flux)
+            num_frames = flux.shape[0]
+            fluxes.append((flux, limit, titles[i]))
+            i+=1
+        print num_frames
+        fig = plt.gcf()
+        fig.set_size_inches(12.9,3)
+        for i in range(0, num_frames):
+            j=1
+            for flux,limit,title in fluxes:
+                ax = plt.subplot(130+j)
+                a = flux[i, np.isfinite(flux[i])]
+                if a.shape[0]==0:
+                    continue
+                mini = limit[0]
+                perc = limit[1]
+                plt.imshow(flux[i], interpolation='None', cmap=plt.get_cmap('Greys'), vmin=mini, vmax=perc)
+                plt.colorbar()
+                plt.title(title)
+                j+=1
+                ax.get_xaxis().set_visible(False)
+                ax.get_yaxis().set_visible(False)
+
+            fname = '../movie/notrain/v1_ktwo%d_c%d_p(%d,%d)/new/_tmp%04d.png' %(kid, campaign, x0, y0, i)
             print('Saving frame', fname)
             plt.savefig(fname)
             plt.clf()
@@ -726,12 +1047,12 @@ if __name__ == "__main__":
         margin = 18
         thread_num = 2
         part = None
-        x0 = 34
-        y0 = 25
+        x0 = 41
+        y0 = 37
         dir_list = ['data', 'pre', 'dif']
         dir_list = [ 'dif']
         for direc in dir_list:
-            folder = '../movie/ktwo%d_c%d_p(%d,%d)/new/' %(kid, campaign, x0, y0)
+            folder = '../movie/cut/ktwo%d_c%d_p(%d,%d)/new/' %(kid, campaign, x0, y0)
             file_names = sorted((fn for fn in os.listdir(folder) if fn.endswith('.png')))[100:300]
             #['animationframa.png', 'animationframb.png', ...] "
 
@@ -742,6 +1063,126 @@ if __name__ == "__main__":
                 im.thumbnail(size, Image.ANTIALIAS)
             '''
             #print writeGif.__doc__
-            filename = '../movie/ktwo%d_c%d_p(%d,%d)/moive.gif' %(kid, campaign, x0, y0)
+            filename = '../movie/cut/ktwo%d_c%d_p(%d,%d)/moive.gif' %(kid, campaign, x0, y0)
             writeGif(filename, images, duration=0.1)
+
+#no train
+    if False:
+        kid = 200000862
+        campaign = 0
+        l2 = 1e5
+        auto_l2 = 0
+        auto = False
+        poly = 0
+        auto_offset = 18
+        auto_window = 3
+        margin = 18
+        thread_num = 2
+        part = None
+        x0 = 0
+        y0 = 0
+        dir_list = ['data', 'pre', 'dif']
+        dir_list = [ 'dif']
+        for direc in dir_list:
+            folder = '../movie/notrain/v1_ktwo%d_c%d_p(%d,%d)/new/' %(kid, campaign, x0, y0)
+            file_names = sorted((fn for fn in os.listdir(folder) if fn.endswith('.png')))[500:700]
+            #['animationframa.png', 'animationframb.png', ...] "
+
+            images = [Image.open(folder+fn) for fn in file_names]
+            '''
+            size = (150,150)
+            for im in images:
+                im.thumbnail(size, Image.ANTIALIAS)
+            '''
+            #print writeGif.__doc__
+            filename = '../movie/notrain/v1_ktwo%d_c%d_p(%d,%d)/moive.gif' %(kid, campaign, x0, y0)
+            writeGif(filename, images, duration=0.1)
+
+
+#no train and test, photometry
+    if False:
+        kid = 200000862
+        campaign = 0
+        l2 = 1e5
+        auto_l2 = 0
+        auto = False
+        poly = 0
+        auto_offset = 18
+        auto_window = 3
+        margin = 18
+        thread_num = 2
+        part = None
+        target_pixel = [27,14]#[25,15]
+
+        prefix = '../hdf5/notrain/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
+        f = h5py.File('%s.hdf5'%prefix, 'r')
+        data_group = f['/data']
+        time = data_group['time'][:]
+        epoch_mask = data_group['epoch_mask'][:]
+        f.close()
+
+        length = epoch_mask.shape[0]
+
+        total_flux = np.zeros(length)
+        total_pre = np.zeros(length)
+        total_origin = np.zeros(length)
+
+        for i in range(27,32):
+            for j in range(8,13):
+                target_pixel = [i,j]
+
+                prefix = '../hdf5/notrain/ktwo%d_c%d_pixel(%d,%d)_%.0e'%(kid, campaign, target_pixel[0], target_pixel[1], l2)
+
+
+                f = h5py.File('%s.hdf5'%prefix, 'r')
+                cpm_info = f['/cpm_info']
+                data_group = f['/data']
+                
+                kid = f.attrs['kid'][()]
+                quarter = f.attrs['campaign'][()]
+                target_flux = data_group['target_flux'][:]
+                target_kplr_mask = data_group['target_kplr_mask'][:,:]
+                epoch_mask = data_group['epoch_mask'][:]
+                data_mask = data_group['data_mask'][:]
+                time = data_group['time'][:]
+                fit_flux = data_group['fit_flux'][:]
+
+                print fit_flux.shape
+                print target_flux.shape
+                res = (target_flux-fit_flux[:,0])
+                print res.shape
+
+                total_flux[epoch_mask>0] += res
+                total_pre[epoch_mask>0] += fit_flux[:,0]
+                total_origin[epoch_mask>0] += target_flux
+
+                f.close()
+
+        print total_flux.shape
+        print time.shape
+
+        total_flux = total_flux/total_pre
+        res_rms = np.sqrt(np.median(total_flux**2))
+        frame, axes = plt.subplots(1, 1)
+
+        '''
+        total_flux = total_origin/total_pre
+        total_flux = (total_flux/np.median(total_flux))-1.
+        '''
+
+        plt.plot(time, total_flux[epoch_mask>0])
+        plt.ylabel("residual")
+        plt.xlabel("time [BKJD]")
+        plt.axhline(y=0,xmin=0,xmax=5, ls='--', c="r",linewidth=1,zorder=10, alpha=0.25)
+        plt.axhline(y=res_rms,xmin=0,xmax=5, ls='--', c="r",linewidth=1,zorder=10, alpha=0.25)
+        plt.axhline(y=-res_rms,xmin=0,xmax=5, ls='--', c="r",linewidth=1,zorder=10, alpha=0.25)
+        #plt.ylim(-res_rms*6, res_rms*6)
+        plt.tight_layout()
+        plt.subplots_adjust(left=None, bottom=None, right=None, top=None,
+                        wspace=0, hspace=0)
+        #plt.suptitle('ktwo%d_c0%d v1'%(kid, campaign))
+        plt.show()
+        #plt.savefig('../plots/notrain/v1photo9p_ktwo%d_c%d_pixel(%d,%d)_%.0e_res.png'%(kid, campaign, target_pixel[0], target_pixel[1], l2), dpi=190)
+
+
 
