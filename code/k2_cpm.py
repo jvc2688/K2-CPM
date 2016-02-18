@@ -9,10 +9,11 @@ import os
 import math
 import h5py
 import sys
+import glob
 from images2gif import writeGif
 from PIL import Image
 from astropy.coordinates import SkyCoord
-from astropy.coordinates import ICRS, Galactic, FK4, FK5
+from astropy.coordinates import ICRS, FK4, FK5
 from astropy.coordinates import Angle, Latitude, Longitude
 
 
@@ -101,7 +102,62 @@ def get_predictor_matrix(tpfs, num):
 
     return predictor_matrix, predictor_epoch_mask
 
-def get_fit_matrix(kid, campaign, target_tpf, target_pixel, l2,  poly=0, auto=False, offset=0, window=0, auto_l2=0, part=None, filter=False, prefix='lightcurve'):
+def get_fit_matrix(target_flux, target_flux_err, target_epoch_mask, predictor_matrix, predictor_epoch_mask, l2, time, poly=0, prefix='lightcurve'):
+    """
+    ## inputs:
+    - `target_flux` - target flux
+    - `target_flux_err` - error of the target flux
+    - `target_epoch_mask`- target epoch mask
+    - `predictor_matrix` - matrix of predictor fluxes
+    - `predictor_epoch_mask` - predictor epoch mask
+    - `l2` - strength of l2 regularization
+    - `time` - one dimension array of BKJD time
+    - `poly` - number of orders of polynomials of time need to be added
+    - `prefix` - prefix of output file
+    
+    ## outputs:
+    - `target_flux` - target flux
+    - `predictor_matrix` - matrix of predictor fluxes
+    - `target_flux_err` - error of the target flux
+    - `l2_vector` - vector of the l2 regularization 
+    - `time` - one dimension array of BKJD time
+    - `epoch_mask` - epoch mask
+    - `data_mask` - data_mask
+    """
+
+    epoch_mask = target_epoch_mask*predictor_epoch_mask
+
+    epoch_len = epoch_mask.shape[0]
+    data_mask = np.ones(epoch_len, dtype=int)
+
+    #remove bad time point based on simulteanous epoch mask
+    co_mask = data_mask*epoch_mask
+    time = time[co_mask>0]
+    target_flux = target_flux[co_mask>0]
+    target_flux_err = target_flux_err[co_mask>0]
+    predictor_matrix = predictor_matrix[co_mask>0, :]
+
+    #add polynomial terms
+    if poly is not None:
+        time_mean = np.mean(time)
+        time_std = np.std(time)
+        nor_time = (time-time_mean)/time_std
+        p = np.polynomial.polynomial.polyvander(nor_time, poly)
+        predictor_matrix = np.concatenate((predictor_matrix, p), axis=1)
+    
+    #construct l2 vectors
+    predictor_num = predictor_matrix.shape[1]
+    print predictor_num
+    auto_pixel_num = 0
+    l2_vector = np.ones(predictor_num, dtype=float)*l2
+
+    print('load matrix successfully')
+
+    return target_flux, predictor_matrix, target_flux_err, l2_vector, time, epoch_mask, data_mask
+
+
+
+def get_fit_matrix_kepler(kid, campaign, target_tpf, target_pixel, l2,  poly=0, auto=False, offset=0, window=0, auto_l2=0, part=None, filter=False, prefix='lightcurve'):
     """
     ## inputs:
     - `target_tpf` - target tpf
@@ -414,7 +470,7 @@ def fit_target(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch
     for i in range(0, thread_num):
         os.remove('./%stmp%d.npy'%(prefix, i))
 
-def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask, covar_list, margin, l2_vector=None, thread_num=1, prefix="lightcurve", transit_mask=None):
+def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask, covar_list, l2_vector=None, thread_num=1, transit_mask=None):
     """
     ## inputs:
     - `target_flux` - target flux
@@ -432,6 +488,7 @@ def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, ti
     ## outputs:
     - prefix.npy file - fitting fluxes of pixels
     """
+    '''
     filename = "./%s"%prefix
     dir = os.path.dirname(filename)
     if not os.path.exists(dir):
@@ -440,6 +497,7 @@ def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, ti
     cpm_info = f['/cpm_info']
     data_group = f['/data']
     cpm_info['margin'] = margin
+    '''
     
     print covar_list.shape
     covar = covar_list**2
@@ -453,8 +511,9 @@ def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, ti
     
     result = lss.linear_least_squares(predictor_flux_matrix, target_flux, covar, l2_vector)
     fit_flux = np.dot(predictor_flux_matrix, result)
-    data_group['fit_flux'] = fit_flux
-    f.close()
+    #data_group['fit_flux'] = fit_flux
+    #f.close()
+    return fit_flux, result
 
 
 def pixel_plot(time, flux, name, size=None):
@@ -506,6 +565,38 @@ def fold_lc(t0, p, flux, time, epoch_mask):
     return fold_time
 
 if __name__ == "__main__":
+    if True:
+        tpf = '../data/ktwo200000862-c00_lpd-targ.fits'
+        l2 = 1e5
+        thread_num = 1
+
+        tpfs = glob.glob('../data/ccd/*.fits')
+        print tpfs
+        predictor_matrix, predictor_epoch_mask = get_predictor_matrix(tpfs, 2200)
+
+        time, target_flux, target_pixel_mask, target_kplr_mask, target_epoch_mask, target_flux_err, column, row \
+            = load_data(tpf)
+
+        target_flux, predictor_matrix, target_flux_err, l2_vector, time, epoch_mask, data_mask \
+            = get_fit_matrix(target_flux, target_flux_err, target_epoch_mask, predictor_matrix, predictor_epoch_mask, l2, time, 0)
+
+        fit_image = np.zeros_like(target_flux)
+        print fit_image.shape
+        for i in range(target_flux.shape[1]):
+            transit_mask = None
+            fit_flux, result = fit_target_no_train(target_flux[:,i], target_kplr_mask, np.copy(predictor_matrix), time, epoch_mask[data_mask>0], target_flux_err[:,i], l2_vector, thread_num, transit_mask)
+            fit_image[:,i] = fit_flux[:,0]
+            np.save('../data/fit_image_ccd_c.npy', fit_image)
+
+        fit_image = fit_image.reshape((fit_image.shape[0],50,50))
+
+        np.save('../data/fit_image_ccd_c.npy', fit_image)
+
+        target_image = target_flux.reshape((target_flux.shape[0],50,50))
+
+        np.save('../data/target_image_ccd_c.npy', target_image)
+
+
     if False:
         tpf = '../data/ktwo200000862-c00_lpd-targ.fits'
         time, flux, pixel_mask, kplr_mask, epoch_mask, flux_err, column, row = load_data(tpf)
