@@ -84,61 +84,22 @@ def load_data(tpf):
 
     return time, flux, pixel_mask, kplr_mask, epoch_mask, flux_err, column, row
 
-def predictor_filter(predictor, num):
-    total = predictor.shape[1]
-    if total >= num:
-        select_mask = np.zeros(total)
-        select = random.sample(xrange(0, total), num)
-        for i in select:
-            select_mask[i] = 1
-        predictor = predictor[:, select_mask>0]
-    return predictor
+#get predictor matrix randomly from a set of tpfs
+def get_predictor_matrix(tpfs, num):
+    predictor_flux = []
+    predictor_epoch_mask=1.
+    for tpf in tpfs:
+        time, flux, pixel_mask, kplr_mask, epoch_mask, flux_err, column, row = load_data(tpf)
+        predictor_epoch_mask *= epoch_mask
+        predictor_flux.append(flux)
+    predictor_matrix =  np.concatenate(predictor_flux, axis=1)
+    size = predictor_matrix.shape[1]
+    sample = np.random.choice(size,num,replace=False)
+    predictor_matrix = predictor_matrix[:,sample]
+    print('predictor matrix:')
+    print(predictor_matrix.shape)
 
-def predictor_filter_bin(predictor, num, bin_num=5):
-    total = predictor.shape[1]
-    if total > num:
-        count = []
-        predictor_mean = np.mean(predictor, axis=0)
-        count, bins = np.histogram(predictor_mean, bin_num)
-        indices = np.digitize(predictor_mean, bins)
-        max_indice = np.argmax(predictor_mean)
-        if indices[max_indice] > bin_num:
-            indices[max_indice] = bin_num
-        select_mask = np.arange(total)
-        select = np.zeros(total, dtype=int)
-        bin_list = np.arange(bin_num)+1
-        bin_list = bin_list[count>0]
-        count = count[count>0]
-        bin_num = bin_list.shape[0]
-        remain = num
-        while remain>0:
-            sample_num = remain//bin_num
-            min = np.min(count)
-            pend_select = np.array([], dtype=int)
-            if sample_num == 0:
-                pend_select = np.concatenate((pend_select, random.sample(select_mask, remain)))
-                remain -= remain
-            else:
-                if min<sample_num:
-                    sample_num = min
-                for i in bin_list:
-                    pend_select = np.concatenate((pend_select, random.sample(select_mask[indices==i], sample_num)))
-                remain -= sample_num*bin_num
-                count -= sample_num
-                bin_list =  bin_list[count>0]
-                count = count[count>0]
-                bin_num = bin_list.shape[0]
-            print pend_select
-            select_old = np.copy(select)
-            for i in pend_select:
-                select[i] = 1
-            tmp_select = select[select_old<1]
-            select_mask = select_mask[tmp_select<1]
-            indices = indices[tmp_select<1]
-        predictor = predictor[:, select>0]
-        print remain
-    print predictor.shape
-    return predictor
+    return predictor_matrix, predictor_epoch_mask
 
 def get_fit_matrix(kid, campaign, target_tpf, target_pixel, l2,  poly=0, auto=False, offset=0, window=0, auto_l2=0, part=None, filter=False, prefix='lightcurve'):
     """
@@ -543,193 +504,6 @@ def fold_lc(t0, p, flux, time, epoch_mask):
     for i in range(length):
         fold_time[i] = (time[i]+t0)-int((time[i]+t0)/p)*p
     return fold_time
-
-def get_fit_matrix_simple(kid, campaign, target_tpf, target_pixel, l2,  poly=0, auto=False, offset=0, window=0, auto_l2=0, part=None, filter=False, prefix='lightcurve'):
-    """
-    ## inputs:
-    - `target_tpf` - target tpf
-    - `auto` - if autorgression
-    - `poly` - number of orders of polynomials of time need to be added
-    
-    ## outputs:
-    - `neighbor_flux_matrix` - fitting matrix of neighbor flux
-    - `target_flux` - target flux
-    - `covar_list` - covariance matrix for every pixel
-    - `time` - one dimension array of BKJD time
-    - `neighbor_kid` - KIC number of the neighbor stars in the fitting matrix
-    - `neighbor_kplr_maskes` - kepler maskes of the neighbor stars in the fitting matrix
-    - `target_kplr_mask` - kepler mask of the target star
-    - `epoch_mask` - epoch mask
-    - `l2_vector` - array of L2 regularization strength
-    """
-    
-    filename = "./%s"%prefix
-    dir = os.path.dirname(filename)
-    if not os.path.exists(dir):
-        os.makedirs(dir)
-    f = h5py.File('%s.hdf5'%prefix, 'w')
-    
-    time, flux, pixel_mask, target_kplr_mask, epoch_mask, flux_err, column, row = load_data(target_tpf)
-
-    flux = flux.reshape((flux.shape[0],50,50))
-    flux_err = flux_err.reshape((flux_err.shape[0],50,50))
-
-    predictor_fluxes, neighbor_pixel_maskes, neighbor_kplr_maskes = [], [], []
-
-    #construt the neighbor flux matrix
-    target_x = target_pixel[0]
-    target_y = target_pixel[1]
-    target_flux = np.float64(flux)[:,target_x,target_y]
-    target_flux_err = np.float64(flux_err)[:,target_x,target_y]
-    target_flux_err[epoch_mask==0] = np.inf
-    print(np.min(target_flux_err))
-
-    print(target_flux.shape)
-
-    excl_x = range(target_x-5, target_x+5+1)
-    excl_y = range(target_y-5, target_y+5+1)
-    print excl_x
-    print excl_y
-    predictor_mask = np.ones((flux.shape[1], flux.shape[2]))
-    for i in range(flux.shape[1]):
-        for j in range(flux.shape[2]):
-            if i in excl_x and j in excl_y:#if i in excl_x or j in excl_y:
-                predictor_mask[i,j] = 0
-    predictor_mask = predictor_mask.flatten()
-    predictor_flux_matrix = flux.reshape((flux.shape[0], -1))[:, predictor_mask>0]
-    print('predictor matrix shape:', predictor_flux_matrix.shape)
-
-    epoch_len = epoch_mask.shape[0]
-    data_mask = np.zeros(epoch_len, dtype=int)
-
-    #construct l2 vectors
-    predictor_num = predictor_flux_matrix.shape[1]
-    auto_pixel_num = 0
-    l2_vector = np.ones(predictor_num, dtype=float)*l2
-    '''
-    l2_vector = np.array([])
-    if neighbor_flux_matrix.size != 0:
-        pixel_num = neighbor_flux_matrix.shape[1]
-        l2_vector = np.ones(pixel_num, dtype=float)*l2
-    else:
-        pixel_num = 0
-    '''
-
-    #spilt lightcurve
-    if part is not None:
-        epoch_len = epoch_mask.shape[0]
-        split_point = []
-        split_point_forward = []
-        split_point.append(0)
-        i = 0
-        while i <epoch_len:
-            if epoch_mask[i] == 0:
-                i += 1
-            else:
-                j = i+1
-                while j<epoch_len and epoch_mask[j] == 0:
-                    j += 1
-                if j-i > 30 and j-split_point[-1] > 1200:
-                    split_point.append(i)
-                    split_point.append(j)
-                i = j
-        split_point.append(epoch_len)
-        #print split_point
-        #data_mask[split_point[part-1]:split_point[part]] = 1
-        start = split_point[2*(part-1)]+offset+window
-        end = split_point[2*(part-1)+1]-offset-window+1
-        data_mask[start:end] = 1
-        '''
-        fit_epoch_mask =  np.split(fit_epoch_mask, split_point)[part-1]
-        fit_time = np.split(time, split_point)[part-1]
-        fit_target_flux = np.split(target_flux, split_point, axis=0)[part-1]
-        flux_err = np.split(flux_err, split_point, axis=0)[part-1]
-        neighbor_flux_matrix = np.split(neighbor_flux_matrix, split_point, axis=0)[part-1]
-
-        print (fit_epoch_mask.shape, fit_time.shape, fit_target_flux.shape, flux_err.shape, neighbor_flux_matrix.shape)
-        '''
-    else:
-        data_mask[:] = 1
-
-    #add auto-regression terms
-    if auto and (window != 0):
-        #print 'auto'
-        tmp_target_kplr_mask = target_kplr_mask.flatten()
-        tmp_target_kplr_mask = tmp_target_kplr_mask[tmp_target_kplr_mask>0]
-        auto_flux = target_flux[:, tmp_target_kplr_mask==3]
-        for i in range(offset+1, offset+window+1):
-            if neighbor_flux_matrix.size != 0:
-                neighbor_flux_matrix = np.concatenate((neighbor_flux_matrix, np.roll(auto_flux, i, axis=0)), axis=1)
-                neighbor_flux_matrix = np.concatenate((neighbor_flux_matrix, np.roll(auto_flux, -i, axis=0)), axis=1)
-            else:
-                neighbor_flux_matrix = np.roll(auto_flux, i, axis=0)
-                neighbor_flux_matrix = np.concatenate((neighbor_flux_matrix, np.roll(auto_flux, -i, axis=0)), axis=1)
-        data_mask[0:offset+window] = 0
-        data_mask[-offset-window:] = 0
-        auto_pixel_num = neighbor_flux_matrix.shape[1] - pixel_num
-        l2_vector = np.concatenate((l2_vector, np.ones(auto_pixel_num, dtype=float)*auto_l2), axis=0)
-        '''
-        other_pixel_num = pixel_num
-        pixel_num = neighbor_flux_matrix.shape[1]
-        if l2_vector.size != 0:
-            l2_vector = np.concatenate((l2_vector, np.ones(pixel_num-other_pixel_num, dtype=float)*auto_l2), axis=0)
-        else:
-            l2_vector = np.ones(pixel_num-other_pixel_num, dtype=float)*auto_l2
-        '''
-    else:
-        auto_pixel_num = 0
-
-    #remove bad time point based on simulteanous epoch mask
-    co_mask = data_mask*epoch_mask
-    time = time[co_mask>0]
-    target_flux = target_flux[co_mask>0]
-    target_flux_err = target_flux_err[co_mask>0]
-    predictor_flux_matrix = predictor_flux_matrix[co_mask>0, :]
-
-    #print neighbor_flux_matrix.shape
-
-    #add polynomial terms
-    if poly is not None:
-        time_mean = np.mean(time)
-        time_std = np.std(time)
-        nor_time = (time-time_mean)/time_std
-        p = np.polynomial.polynomial.polyvander(nor_time, poly)
-        predictor_flux_matrix = np.concatenate((predictor_flux_matrix, p), axis=1)
-        l2_vector = np.concatenate((l2_vector, np.zeros(poly+1)), axis=0)
-    #print neighbor_flux_matrix.shape
-
-    f.attrs['kid'] = kid
-    f.attrs['campaign'] = campaign
-    if part is not None:
-        f.attrs['part'] = part
-
-    data_group = f.create_group('data')
-    cpm_info = f.create_group('cpm_info')
-    
-    data_group['target_flux'] = target_flux
-    data_group['time'] = time
-    data_group['target_kplr_mask'] = target_kplr_mask
-    data_group['epoch_mask'] = epoch_mask
-    data_group['data_mask'] = data_mask
-
-    cpm_info['predictor_num'] = predictor_num
-    cpm_info['l2'] = l2
-    if auto:
-        cpm_info['auto'] = 1
-        cpm_info['auto_pixel_num'] = auto_pixel_num
-        cpm_info['auto_l2'] = auto_l2
-        cpm_info['auto_window'] = window
-        cpm_info['auto_offset'] = offset
-    else:
-        cpm_info['auto'] = 0
-    cpm_info['poly'] = poly
-
-    print('kic%d load matrix successfully'%kid)
-
-    f.close()
-
-    return predictor_flux_matrix, target_flux, target_flux_err, time, target_kplr_mask, epoch_mask, data_mask, l2_vector, predictor_num, auto_pixel_num
-
 
 if __name__ == "__main__":
     if False:
@@ -1393,7 +1167,7 @@ if __name__ == "__main__":
         plt.show()
         #plt.savefig('../plots/notrain/v1photo9p_ktwo%d_c%d_pixel(%d,%d)_%.0e_res.png'%(kid, campaign, target_pixel[0], target_pixel[1], l2), dpi=190)
 
-    if True:
+    if False:
         c = SkyCoord('06h07m35.4s', '+24d05m40.8s', frame=FK5, equinox='J2000.0')
 
         var, types = load_var('../data/variable.dat')
@@ -1433,6 +1207,8 @@ if __name__ == "__main__":
         margin = 18
         thread_num = 2
         part = None
+
+        lim_list = [[-400,400],[-450,200],[-1000,400],[-100,150],[-400,200], [-500,200],[-200,200],[-150,150],[-400,200],[-200,200],[-200,100],[-400,200],[-1000,1000]]
 
         index=0
         for source in pix_coo:
@@ -1508,13 +1284,14 @@ if __name__ == "__main__":
             plt.axhline(y=res_rms,xmin=0,xmax=5, ls='--', c="r",linewidth=1,zorder=10, alpha=0.25)
             plt.axhline(y=-res_rms,xmin=0,xmax=5, ls='--', c="r",linewidth=1,zorder=10, alpha=0.25)
             #plt.ylim(-res_rms*10, res_rms*10)
-            plt.ylim(-200, 200)
+            lim = lim_list[index]
+            plt.ylim(lim[0],lim[1])
             plt.tight_layout()
             plt.subplots_adjust(left=None, bottom=None, right=None, top=None,
                             wspace=0, hspace=0)
             #plt.suptitle('ktwo%d_c0%d v1'%(kid, campaign))
             #plt.show()
-            plt.savefig('../plots/notrain/shift_v%dphoto9p_ktwo%d_c%d_pixel(%d,%d)_%.0e_res_fold.png'%(index,kid, campaign, target_pixel[0], target_pixel[1], l2), dpi=190)
+            plt.savefig('../plots/notrain/shift_new0_v%dphoto9p_ktwo%d_c%d_pixel(%d,%d)_%.0e_res_fold.png'%(index,kid, campaign, target_pixel[0], target_pixel[1], l2), dpi=190)
             index += 1
 
     if False:
