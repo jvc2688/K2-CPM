@@ -19,6 +19,8 @@ from sklearn import linear_model
 from sklearn.datasets import load_iris
 import gc
 from scipy.optimize import minimize
+from sklearn.decomposition import PCA
+
 #from sklearn.feature_selection import SelectFromModel
 
 sap_style = dict(color='w', linestyle='', marker='.', markersize=2, markerfacecolor='k', markeredgecolor='k', markevery=None)
@@ -651,7 +653,9 @@ def get_kplr_mask_ffi(pixel_mask):
     return kplr_mask
 
 def load_ffi(name):
-    ffi = np.load(name)
+    hdu_list = pyfits.open(name)
+    ffi = hdu_list[0].data
+    #ffi = np.load(name)
     pixel_mask = get_pixel_mask_ffi(ffi)
     epoch_mask = get_epoch_mask_ffi(pixel_mask)
     kplr_mask = get_kplr_mask_ffi(pixel_mask)
@@ -665,7 +669,7 @@ def load_ffi(name):
 
     return ffi, kplr_mask, epoch_mask
 
-def get_predictor_matrix_ffi(ffi, x, y, kplr_mask, num):
+def get_predictor_matrix_ffi(ffi, x, y, kplr_mask, num, var_mask=None):
     x_lim = kplr_mask.shape[0]
     y_lim = kplr_mask.shape[1]
 
@@ -685,7 +689,10 @@ def get_predictor_matrix_ffi(ffi, x, y, kplr_mask, num):
     else:
         predictor_mask[:,y-5:y+5+1] = 0
 
-    pixels = np.where(np.logical_and(kplr_mask>0, predictor_mask>0))
+    if var_mask is None:
+        pixels = np.where(np.logical_and(kplr_mask>0, predictor_mask>0))
+    else:
+        pixels = np.where(np.logical_and(np.logical_and(kplr_mask>0, predictor_mask>0), var_mask<1))
 
     dis = np.ones_like(kplr_mask)*99999999
 
@@ -765,10 +772,10 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predict
     l2_vector = np.ones(predictor_num, dtype=float)*l2
 
     predictor_num = predictor_matrix.shape[1]
-    print predictor_num
+    #print predictor_num
 
 
-    print('load matrix successfully')
+    #print('load matrix successfully')
 
     return target_flux, predictor_matrix, None, l2_vector, epoch_mask, data_mask
 
@@ -779,9 +786,9 @@ def V(u_min, t_0, t_E, t):
 
 def objective(para, t, kplr_mask, target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2):
     u_min, t_0, t_E = para[0], para[1], para[2]
-    print u_min, t_0, t_E
+    #print u_min, t_0, t_E
     thread_num = 1
-    ml = np.array([V(u_min, t_0, t_E, t)]).T*10.
+    ml = np.array([V(u_min, t_0, t_E, t)]).T
 
     flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
                     = get_fit_matrix_ffi(target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2, 0, 'lightcurve', ml)
@@ -802,9 +809,76 @@ def objective(para, t, kplr_mask, target_flux, epoch_mask, predictor_matrix, pre
     '''
 
     error = np.sum(np.square(flux-fit_flux))
-    print error
+    #print error
 
     return error
+
+def objective_coadd(para, t, kplr_mask, target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2):
+    u_min, t_0, t_E = para[0], para[1], para[2]
+    #print u_min, t_0, t_E
+    thread_num = 1
+    ml = np.array([V(u_min, t_0, t_E, t)]).T
+
+    flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
+                    = get_fit_matrix_ffi(target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2, 0, 'lightcurve', ml)
+
+    #print flux.shape
+    result = fit_target_no_train(flux, kplr_mask, np.copy(predictor_matrix), None, target_epoch_mask[data_mask>0], None, l2_vector, thread_num)
+    #print result[-1]
+    fit_flux = np.sum(np.dot(predictor_matrix, result), axis=1)
+    #print fit_flux.shape
+    #cpm = np.dot(predictor_matrix[:,:-1], result[:-1])[:,0]
+    #dif = flux-fit_flux
+    #dif_cpm = flux - cpm
+
+    '''
+    print dif_cpm.shape
+    plt.plot(dif_cpm, '.k')
+    plt.show()
+    '''
+
+    error = np.sum(np.square(np.sum(flux, axis=1)-fit_flux))
+    #print error
+
+    return error
+
+class cpm:
+    def __init__(self, data_file, pixel, var_file=None, train_start=0, train_end=0):
+        if var_file is not None:
+            var_mask = np.load(var_file)
+
+        #pixel_list = np.loadtxt(pixel_file, dtype=int)#[12:13]
+        self.l2 = 0#1e5#1e6
+        self.num_predictor = 1600
+        thread_num = 1
+
+        ffi, self.kplr_mask, self.epoch_mask = load_ffi(data_file)
+
+        self.train_mask = np.ones(ffi.shape[0], dtype=int)
+        self.train_mask[train_start:train_end] = 0 
+
+        self.target_x, self.target_y = pixel
+        pixel_mask = np.zeros((1024,1100), dtype=int)
+        pixel_mask[self.target_x, self.target_y] = 1
+        pixel_mask = pixel_mask[self.kplr_mask>0]
+        self.target_flux = ffi[:,pixel_mask>0][:,0].astype(float)
+        self.predictor_epoch_mask = np.ones(self.epoch_mask.shape[0])
+        transit_mask = None
+        predictor_matrix = get_predictor_matrix_ffi(ffi, self.target_x, self.target_y, self.kplr_mask, self.num_predictor, var_mask)
+        pca = PCA(n_components=200)
+        pca.fit(predictor_matrix)
+        self.predictor_matrix = pca.transform(predictor_matrix)
+
+    def fit_lc(self, ml):
+        ml = np.array([ml]).T
+        flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
+                        = get_fit_matrix_ffi(self.target_flux, self.epoch_mask, self.predictor_matrix, self.predictor_epoch_mask, self.l2, 0, 'lightcurve', ml)
+
+        #fit_flux = np.dot(predictor_matrix, result)[:,0]
+        cpm_fit = np.dot(predictor_matrix[:,0:-1], result[:-1])[:,0]
+        ml_fit = (flux - cpm_fit)/result[-1]
+
+        return ml_fit
 
 
 if __name__ == "__main__":
@@ -876,25 +950,28 @@ if __name__ == "__main__":
         np.save(out_name_dif, dif)
 
 #pca
-    if False:
+    if True:
         channel = int(sys.argv[1])
-        train_start = int(sys.argv[2])
-        train_end = int(sys.argv[3])
-        output_name = sys.argv[4]
+        pixel_file = sys.argv[2]
+        train_start = int(sys.argv[3])
+        train_end = int(sys.argv[4])
+        output_name = sys.argv[5]
         if len(sys.argv)>=6:
             pixel_file = sys.argv[5]        
             print 'pixel file:\n%s'%pixel_file
         else:
             pixel_file = None
             print 'run full image'
-        name = '/scratch/dw1519/k2c9/data/ffi/kplr.geert.io/k2-c9a-quicklook-v20160521/ch%d.npy'%channel
-        out_name = '/scratch/dw1519/k2c9/data/ffi/kplr.geert.io/k2-c9a-quicklook-v20160521/new_pixel/fit_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
-        out_name_dif = '/scratch/dw1519/k2c9/data/ffi/kplr.geert.io/k2-c9a-quicklook-v20160521/new_pixel/dif_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
+        name = '/Users/dunwang/Desktop/fits/ch%d_image.fits'%channel
+        out_name_fit = '/Users/dunwang/Desktop/new_pixel/pca_fit/fit_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
+        out_name_dif = '/Users/dunwang/Desktop/new_pixel/pca_fit/dif_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
 
         print 'train:%d-%d'%(train_start,train_end)
 
+        var_mask = np.load('/Users/dunwang/Desktop/new_pixel/var_mask_ch%d.npy'%channel)
+
         l2 = 0#1e6
-        num_predictor = 400#1600
+        num_predictor = 1600#1600
         thread_num = 1
 
         ffi, kplr_mask, epoch_mask = load_ffi(name)
@@ -914,7 +991,7 @@ if __name__ == "__main__":
         train_mask = np.ones(ffi.shape[0], dtype=int)
         train_mask[train_start:train_end] = 0 
 
-
+        gain_factor = 115.49
         if pixel_file is not None:
             pixel_list = np.loadtxt(pixel_file, dtype=int)
 
@@ -929,11 +1006,14 @@ if __name__ == "__main__":
                     pixel_mask = np.zeros((1024,1100), dtype=int)
                     pixel_mask[target_x, target_y] = 1
                     pixel_mask = pixel_mask[kplr_mask>0]
-                    target_flux = ffi[:,pixel_mask>0][:,0].astype(float)
+                    target_flux = ffi[:,pixel_mask>0][:,0].astype(float)*gain_factor
                     predictor_epoch_mask = np.ones(epoch_mask.shape[0])
                     transit_mask = None
                     #predictor_matrix = get_predictor_matrix_ffi(ffi, target_x, target_y, kplr_mask, num_predictor)
-                    predictor_matrix = get_predictor_matrix_pca(num_predictor)
+                    predictor_matrix = get_predictor_matrix_ffi(ffi, target_x, target_y, kplr_mask, num_predictor, var_mask)*gain_factor
+                    pca = PCA(n_components=200)
+                    pca.fit(predictor_matrix)
+                    predictor_matrix = pca.transform(predictor_matrix)
 
                     flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
                         = get_fit_matrix_ffi(target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2, 0)
@@ -947,7 +1027,7 @@ if __name__ == "__main__":
                     fit_image[epoch_mask>0,i] = -1
                     dif[epoch_mask>0,i] = np.nan
                 if i%2000 == 0:
-                    np.save(out_name, fit_image)
+                    np.save(out_name_fit, fit_image)
                     np.save(out_name_dif, dif)
                 i+=1
         else:
@@ -967,30 +1047,37 @@ if __name__ == "__main__":
             dif[:,kplr_mask>0] = np.float32(ffi-fit_image[:,kplr_mask>0])
             np.save(out_name_dif, dif)
 
-        np.save(out_name, fit_image)
+        np.save(out_name_fit, fit_image)
         np.save(out_name_dif, dif)
 
 #simulteanous
-    if True:
+    if False:
         channel = int(sys.argv[1])
         pixel_file = sys.argv[2]
         train_start = int(sys.argv[3])
         train_end = int(sys.argv[4])
         output_name = sys.argv[5]
+        u_min = float(sys.argv[6])
+        t_0 = float(sys.argv[7])
+        t_E = float(sys.argv[8])
 
-        name = '/scratch/dw1519/k2c9/data/ffi/kplr.geert.io/k2-c9a-quicklook-v20160521/ch%d.npy'%channel
-        out_name_error = '/scratch/dw1519/k2c9/data/ffi/kplr.geert.io/k2-c9a-quicklook-v20160521/new_pixel/error_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
-        out_name_dif = '/scratch/dw1519/k2c9/data/ffi/kplr.geert.io/k2-c9a-quicklook-v20160521/new_pixel/dif_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
-        out_name_para = '/scratch/dw1519/k2c9/data/ffi/kplr.geert.io/k2-c9a-quicklook-v20160521/new_pixel/para_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
+        name = '/Users/dunwang/Desktop/fits/ch%d_image.fits'%channel
+        out_name_error = '/Users/dunwang/Desktop/new_pixel/pca_fit/error_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
+        out_name_dif = '/Users/dunwang/Desktop/new_pixel/pca_fit/dif_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
+        out_name_para = '/Users/dunwang/Desktop/new_pixel/pca_fit/para_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
+        out_name_coe = '/Users/dunwang/Desktop/new_pixel/pca_fit/coe_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
 
-
+        initial = [u_min, t_0, t_E]
         print 'pixel file:\n%s'%pixel_file
         print 'train:%d-%d'%(train_start,train_end)
+        print 'initial:%f %f %f'%(u_min, t_0, t_E)
 
-        pixel_list = np.loadtxt(pixel_file, dtype=int)
+        var_mask = np.load('/Users/dunwang/Desktop/new_pixel/var_mask_ch%d.npy'%channel)
+
+        pixel_list = np.loadtxt(pixel_file, dtype=int)#[12:13]
         print pixel_list
         l2 = 0#1e5#1e6
-        num_predictor = 800
+        num_predictor = 1600
         thread_num = 1
 
         ffi, kplr_mask, epoch_mask = load_ffi(name)
@@ -1007,7 +1094,7 @@ if __name__ == "__main__":
         predictor_matrix = get_predictor_matrix_ffi(ffi, target_x, target_y, kplr_mask, num_predictor)
         '''
 
-        t = np.load('/scratch/dw1519/k2c9/data/ffi/kplr.geert.io/k2-c9a-quicklook-v20160521/time.npy')
+        t = np.load('/Users/dunwang/Desktop/new_pixel/time.npy')
 
         train_mask = np.ones(ffi.shape[0], dtype=int)
         train_mask[train_start:train_end] = 0 
@@ -1015,6 +1102,10 @@ if __name__ == "__main__":
         dif = np.zeros((ffi.shape[0], pixel_list.shape[0]), dtype=float)
         error = np.zeros((ffi.shape[0], pixel_list.shape[0]), dtype=float)
         para = np.zeros((pixel_list.shape[0], 3), dtype=float)
+        coe = np.zeros(pixel_list.shape[0], dtype=float)
+
+        gain_factor = 115.49
+
         i = 0
         for pixel in pixel_list:
             target_x,target_y = pixel[0], pixel[1]#get_xy(i, kplr_mask)
@@ -1023,16 +1114,20 @@ if __name__ == "__main__":
                 pixel_mask = np.zeros((1024,1100), dtype=int)
                 pixel_mask[target_x, target_y] = 1
                 pixel_mask = pixel_mask[kplr_mask>0]
-                target_flux = ffi[:,pixel_mask>0][:,0].astype(float)
+                target_flux = ffi[:,pixel_mask>0][:,0].astype(float)*gain_factor
                 predictor_epoch_mask = np.ones(epoch_mask.shape[0])
                 transit_mask = None
-                predictor_matrix = get_predictor_matrix_ffi(ffi, target_x, target_y, kplr_mask, num_predictor)
-                res = minimize(objective, [0.1,2457511.,6.], args=(t, kplr_mask, target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2), bounds=[(0.000001, 1.), (2457500., 2457525.), (0.1, 1000.)])
+                predictor_matrix = get_predictor_matrix_ffi(ffi, target_x, target_y, kplr_mask, num_predictor, var_mask)*gain_factor
+                pca = PCA(n_components=200)
+                pca.fit(predictor_matrix)
+                predictor_matrix = pca.transform(predictor_matrix)
+                print initial
+                res = minimize(objective, initial, args=(t, kplr_mask, target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2), bounds=[(0.0001, 3.), (2457500., 2457530.), (0.1, 1000.)])
                 print res.message
                 #np.save('/scratch/dw1519/k2c9/data/ffi/kplr.geert.io/k2-c9a-quicklook-v20160521/new_pixel/res_%s_%d-%d.npy'%(output_name, target_x, target_y), res.x)
                 u_min, t_0, t_E = res.x[0], res.x[1], res.x[2]
                 print u_min, t_0, t_E
-                ml = np.array([V(u_min, t_0, t_E, t)]).T*10.
+                ml = np.array([V(u_min, t_0, t_E, t)]).T
 
                 flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
                         = get_fit_matrix_ffi(target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2, 0, 'lightcurve', ml)
@@ -1042,7 +1137,9 @@ if __name__ == "__main__":
                 dif_cpm = flux-cpm_flux
                 dif[target_epoch_mask>0,i] = dif_cpm
                 error[target_epoch_mask>0,i] = flux-fit_flux
+                print np.sum(np.square(flux-fit_flux))
                 para[i] = res.x
+                coe[i] = result[-1]
             else:
                 fit_image[epoch_mask>0,i] = -1
                 dif[epoch_mask>0,i] = np.nan
@@ -1053,7 +1150,121 @@ if __name__ == "__main__":
         np.save(out_name_error, error)
         np.save(out_name_dif, dif)
         np.save(out_name_para, para)
+        np.save(out_name_coe, coe)
 
+
+#simulteanous co-add
+    if False:
+        channel = int(sys.argv[1])
+        pixel_file = sys.argv[2]
+        train_start = int(sys.argv[3])
+        train_end = int(sys.argv[4])
+        output_name = sys.argv[5]
+        u_min = float(sys.argv[6])
+        t_0 = float(sys.argv[7])
+        t_E = float(sys.argv[8])
+
+        name = '/Users/dunwang/Desktop/fits/ch%d_image.fits'%channel
+        out_name_error = '/Users/dunwang/Desktop/new_pixel/pca_fit/error_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
+        out_name_dif = '/Users/dunwang/Desktop/new_pixel/pca_fit/dif_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
+        out_name_para = '/Users/dunwang/Desktop/new_pixel/pca_fit/para_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
+        out_name_coe = '/Users/dunwang/Desktop/new_pixel/pca_fit/coe_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
+
+        initial = [u_min, t_0, t_E]
+        print 'pixel file:\n%s'%pixel_file
+        print 'train:%d-%d'%(train_start,train_end)
+        print 'initial:%f %f %f'%(u_min, t_0, t_E)
+
+        var_mask = np.load('/Users/dunwang/Desktop/new_pixel/var_mask_ch%d.npy'%channel)
+
+        pixel_list = np.loadtxt(pixel_file, dtype=int)[12:13]
+        #aperture = np.zeros((5,5))
+        #aperture[1:4,1:4] = 1
+        #aperture = aperture.flatten()
+        #pixel_list = pixel_list[aperture>0] 
+        print pixel_list
+        l2 = 0#1e5#1e6
+        num_predictor = 1600
+        thread_num = 1
+
+        ffi, kplr_mask, epoch_mask = load_ffi(name)
+        print ffi.shape
+        #start = np.argwhere(idx[kplr_mask.flatten()>0]==start)
+        #end = np.argwhere(idx[kplr_mask.flatten()>0]==end)
+        '''
+        plt.imshow(kplr_mask, interpolation='None', cmap=plt.get_cmap('Greys'))
+        plt.show()
+
+
+        target_x,target_y = get_xy(10000, kplr_mask)
+        print target_x, target_y
+        predictor_matrix = get_predictor_matrix_ffi(ffi, target_x, target_y, kplr_mask, num_predictor)
+        '''
+
+        t = np.load('/Users/dunwang/Desktop/new_pixel/time.npy')
+
+        train_mask = np.ones(ffi.shape[0], dtype=int)
+        train_mask[train_start:train_end] = 0 
+        fit_image = np.zeros((ffi.shape[0], pixel_list.shape[0]), dtype=float)
+        dif = np.zeros((ffi.shape[0], pixel_list.shape[0]), dtype=float)
+        error = np.zeros((ffi.shape[0], pixel_list.shape[0]), dtype=float)
+        para = np.zeros((pixel_list.shape[0], 3), dtype=float)
+        coe = np.zeros(pixel_list.shape[0], dtype=float)
+        i = 0
+        total_flux = np.zeros(ffi.shape[0])
+        for pixel in pixel_list:
+            target_x,target_y = pixel[0], pixel[1]#get_xy(i, kplr_mask)
+            print target_x, target_y
+            if kplr_mask[target_x, target_y] > 0:
+                pixel_mask = np.zeros((1024,1100), dtype=int)
+                pixel_mask[target_x-1:target_x+2, target_y-1:target_y+2] = 1
+                pixel_mask = pixel_mask[kplr_mask>0]
+                target_flux = ffi[:,pixel_mask>0].astype(float)
+                target_flux = np.sum(target_flux, axis=1)
+                '''
+                plt.plot(target_flux, '.k')
+                plt.show()
+                '''
+                predictor_epoch_mask = np.ones(epoch_mask.shape[0])
+                transit_mask = None
+                predictor_matrix = get_predictor_matrix_ffi(ffi, target_x, target_y, kplr_mask, num_predictor, var_mask)
+                pca = PCA(n_components=100)
+                pca.fit(predictor_matrix)
+                predictor_matrix = pca.transform(predictor_matrix)
+                print initial
+                res = minimize(objective, initial, args=(t, kplr_mask, target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2), bounds=[(0.0001, 3.), (2457500., 2457530.), (0.1, 1000.)])
+                print res.message
+                #np.save('/scratch/dw1519/k2c9/data/ffi/kplr.geert.io/k2-c9a-quicklook-v20160521/new_pixel/res_%s_%d-%d.npy'%(output_name, target_x, target_y), res.x)
+                u_min, t_0, t_E = res.x[0], res.x[1], res.x[2]
+                print u_min, t_0, t_E
+                ml = np.array([V(u_min, t_0, t_E, t)]).T
+
+                flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
+                        = get_fit_matrix_ffi(target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2, 0, 'lightcurve', ml)
+                result = fit_target_no_train(flux, kplr_mask, np.copy(predictor_matrix), None, target_epoch_mask[data_mask>0], None, l2_vector, thread_num)
+
+                fit_flux = np.dot(predictor_matrix, result)[:,0]
+                cpm_flux = np.dot(predictor_matrix[:,:-1], result[:-1])[:,0]
+                dif_cpm = flux-cpm_flux
+                dif[target_epoch_mask>0,i] = dif_cpm
+                error[target_epoch_mask>0,i] = flux-fit_flux
+                print np.sum(np.square(flux-fit_flux))
+
+                #fit_flux = np.sum(np.dot(predictor_matrix, result), axis=1)
+                #print np.sum(np.square(np.sum(flux, axis=1)-fit_flux))
+                para[i] = res.x
+                coe[i] = result[-1]
+            else:
+                fit_image[epoch_mask>0,i] = -1
+                dif[epoch_mask>0,i] = np.nan
+            if i%2000 == 0:
+                #np.save(out_name, fit_image)
+                np.save(out_name_dif, dif)
+            i+=1
+        np.save(out_name_error, error)
+        np.save(out_name_dif, dif)
+        np.save(out_name_para, para)
+        np.save(out_name_coe, coe)
 
     if False:
         channel = int(sys.argv[1])
