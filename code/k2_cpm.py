@@ -10,6 +10,7 @@ import math
 import h5py
 import sys
 import glob
+import argparse
 #from images2gif import writeGif
 #from PIL import Image
 from astropy.coordinates import SkyCoord
@@ -703,10 +704,56 @@ def get_predictor_matrix_ffi(ffi, x, y, kplr_mask, num, var_mask=None):
 
     predictor_mask = predictor_mask.flatten()
     predictor_mask[index[num:]] = 0
+    #predictor_mask[index[0:num]] = 0
+    #predictor_mask[index[2*num:]] = 0
 
     #plt.imshow(predictor_mask.reshape((1024,1100)), interpolation='None', cmap=plt.get_cmap('Greys'))
     #plt.show()
 
+    predictor_mask = predictor_mask[kplr_mask.flatten()>0]
+
+    predictor_matrix = ffi[:, predictor_mask>0].astype(float)
+
+    return predictor_matrix
+
+def get_predictor_matrix_ffi_bright(ffi, x, y, kplr_mask, num, var_mask=None):
+    x_lim = kplr_mask.shape[0]
+    y_lim = kplr_mask.shape[1]
+
+    predictor_mask = np.ones_like(kplr_mask, dtype=int)
+
+    if x<=5:
+        predictor_mask[:x+5+1,:] = 0
+    elif x>=x_lim-5-1:
+        predictor_mask[x-5:,:] = 0
+    else:
+        predictor_mask[x-5:x+5+1,:] = 0
+
+    if y<=5:
+        predictor_mask[:,:y+5+1] = 0
+    elif y>=y_lim-5-1:
+        predictor_mask[:,y-5:] = 0
+    else:
+        predictor_mask[:,y-5:y+5+1] = 0
+
+    if var_mask is None:
+        pixel_mask = np.logical_and(kplr_mask>0, predictor_mask>0)
+    else:
+        pixel_mask = np.logical_and(np.logical_and(kplr_mask>0, predictor_mask>0), var_mask<1)
+
+    pixel_mask = pixel_mask[kplr_mask>0]
+
+    target_mask = np.zeros((1024,1100))
+    target_mask[x, y] = 1
+    target_mask = target_mask[kplr_mask>0]
+
+    med_flux = np.median(ffi, axis=0)
+    flux_dif = np.absolute(med_flux-med_flux[target_mask>0])
+    flux_dif[pixel_mask] = 99999999
+
+    index = np.argsort(flux_dif)
+    predictor_mask = predictor_mask.flatten()
+    predictor_mask[index[num:]] = 0
 
     predictor_mask = predictor_mask[kplr_mask.flatten()>0]
 
@@ -880,6 +927,103 @@ class cpm:
 
         return ml_fit
 
+class Image:
+    def __init__(self, data_file):
+        self.ffi, self.kplr_mask, self.epoch_mask = load_ffi(name)
+        self.med_flux = np.median(self.ffi, axis=0)
+        gc.collect()
+        self.data_len = self.ffi.shape[0]
+
+    def get_predictor_matrix_ffi_bright(self, x, y, num, var_mask=None):
+        x_lim = self.kplr_mask.shape[0]
+        y_lim = self.kplr_mask.shape[1]
+        kplr_mask = self.kplr_mask
+        med_flux = self.med_flux
+        ffi = self.ffi
+
+        predictor_mask = np.ones_like(kplr_mask, dtype=int)
+
+        if x<=5:
+            predictor_mask[:x+5+1,:] = 0
+        elif x>=x_lim-5-1:
+            predictor_mask[x-5:,:] = 0
+        else:
+            predictor_mask[x-5:x+5+1,:] = 0
+
+        if y<=5:
+            predictor_mask[:,:y+5+1] = 0
+        elif y>=y_lim-5-1:
+            predictor_mask[:,y-5:] = 0
+        else:
+            predictor_mask[:,y-5:y+5+1] = 0
+
+        if var_mask is None:
+            pixel_mask = np.logical_and(kplr_mask>0, predictor_mask>0)
+        else:
+            pixel_mask = np.logical_and(np.logical_and(kplr_mask>0, predictor_mask>0), var_mask<1)
+
+        pixel_mask = pixel_mask[kplr_mask>0]
+
+        target_mask = np.zeros((x_lim,y_lim))
+        target_mask[x, y] = 1
+        target_mask = target_mask[kplr_mask>0]
+
+        #med_flux = np.median(ffi, axis=0)
+        flux_dif = np.absolute(med_flux-med_flux[target_mask>0])
+        flux_dif[np.logical_not(pixel_mask)] = 99999999
+
+        index = np.argsort(flux_dif)
+        predictor_mask = predictor_mask.flatten()
+        predictor_mask[index[num:]] = 0
+
+        predictor_mask = predictor_mask[kplr_mask.flatten()>0]
+
+        predictor_matrix = ffi[:, predictor_mask>0].astype(float)
+
+        return predictor_matrix
+
+    def get_predictor_matrix_ffi(self, x, y, num, var_mask=None):
+        kplr_mask = self.kplr_mask
+        ffi = self.ffi
+        x_lim = kplr_mask.shape[0]
+        y_lim = kplr_mask.shape[1]
+
+        predictor_mask = np.ones_like(kplr_mask, dtype=int)
+
+        if x<=5:
+            predictor_mask[:x+5+1,:] = 0
+        elif x>=x_lim-5-1:
+            predictor_mask[x-5:,:] = 0
+        else:
+            predictor_mask[x-5:x+5+1,:] = 0
+
+        if y<=5:
+            predictor_mask[:,:y+5+1] = 0
+        elif y>=y_lim-5-1:
+            predictor_mask[:,y-5:] = 0
+        else:
+            predictor_mask[:,y-5:y+5+1] = 0
+
+        if var_mask is None:
+            pixels = np.where(np.logical_and(kplr_mask>0, predictor_mask>0))
+        else:
+            pixels = np.where(np.logical_and(np.logical_and(kplr_mask>0, predictor_mask>0), var_mask<1))
+
+        dis = np.ones_like(kplr_mask)*99999999
+
+        dis[pixels[0], pixels[1]] = np.square(pixels[0]-x)+np.square(pixels[1]-y)
+
+        dis = dis.flatten()
+        index = np.argsort(dis)
+
+        predictor_mask = predictor_mask.flatten()
+        predictor_mask[index[num:]] = 0
+
+        predictor_mask = predictor_mask[kplr_mask.flatten()>0]
+        predictor_matrix = ffi[:, predictor_mask>0].astype(float)
+
+        return predictor_matrix
+
 
 if __name__ == "__main__":
 
@@ -951,17 +1095,25 @@ if __name__ == "__main__":
 
 #pca
     if True:
+        parser = argparse.ArgumentParser(description="")
+        parser.add_argument("in_file", help="Path to the fits file contains the raw data")
+        parser.add_argument("pixel_file", help="Path to the file contains the coordinates of the pxiels need to be processed")
+        parser.add_argument("-t", "--test", type=int, nargs=2, help="begin and end of the test window")
+        parser.add_argument("-o","--output", help="Path to the output file")
+        parser.parse_args()
         channel = int(sys.argv[1])
         pixel_file = sys.argv[2]
         train_start = int(sys.argv[3])
         train_end = int(sys.argv[4])
         output_name = sys.argv[5]
+        '''
         if len(sys.argv)>=6:
             pixel_file = sys.argv[5]        
             print 'pixel file:\n%s'%pixel_file
         else:
             pixel_file = None
             print 'run full image'
+        '''
         name = '/Users/dunwang/Desktop/fits/ch%d_image.fits'%channel
         out_name_fit = '/Users/dunwang/Desktop/new_pixel/pca_fit/fit_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
         out_name_dif = '/Users/dunwang/Desktop/new_pixel/pca_fit/dif_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
@@ -969,86 +1121,101 @@ if __name__ == "__main__":
         print 'train:%d-%d'%(train_start,train_end)
 
         var_mask = np.load('/Users/dunwang/Desktop/new_pixel/var_mask_ch%d.npy'%channel)
+        #var_mask = None
 
+        use_pca = True
         l2 = 0#1e6
         num_predictor = 1600#1600
         thread_num = 1
 
+        '''
         ffi, kplr_mask, epoch_mask = load_ffi(name)
         print ffi.shape
-        #start = np.argwhere(idx[kplr_mask.flatten()>0]==start)
-        #end = np.argwhere(idx[kplr_mask.flatten()>0]==end)
-        '''
-        plt.imshow(kplr_mask, interpolation='None', cmap=plt.get_cmap('Greys'))
-        plt.show()
-
-
-        target_x,target_y = get_xy(10000, kplr_mask)
-        print target_x, target_y
-        predictor_matrix = get_predictor_matrix_ffi(ffi, target_x, target_y, kplr_mask, num_predictor)
         '''
 
-        train_mask = np.ones(ffi.shape[0], dtype=int)
-        train_mask[train_start:train_end] = 0 
+        image = Image(name)
+        ffi = image.ffi
+        kplr_mask = image.kplr_mask
+        epoch_mask = image.epoch_mask
 
-        gain_factor = 115.49
-        if pixel_file is not None:
-            pixel_list = np.loadtxt(pixel_file, dtype=int)
+        train_list = [[0,80],[80,160],[160,240],[240,320],[320,400],[400,480],[480,560],[560,640],[640,720],[720,800],\
+                    [800,880],[880,960],[960,1040],[1040,1120],[1120,1200],[1200,1287]]
+        
+        for train_lim in train_list:
+            train_start = train_lim[0]
+            train_end = train_lim[1]
+            out_name_fit = '/Users/dunwang/Desktop/new_pixel/pca_fit/fit_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
+            out_name_dif = '/Users/dunwang/Desktop/new_pixel/pca_fit/dif_ch%d_%d-%d_%s.npy'%(channel, train_start, train_end, output_name)
+            train_mask = np.ones(ffi.shape[0], dtype=int)
+            train_mask[train_start:train_end] = 0 
 
+            gain_factor = 1#115.49
+            if pixel_file is not None:
+                pixel_list = np.loadtxt(pixel_file, dtype=int)
 
-            fit_image = np.zeros((ffi.shape[0], pixel_list.shape[0]), dtype=float)
-            dif = np.zeros((ffi.shape[0], pixel_list.shape[0]), dtype=float)
-            i = 0
-            for pixel in pixel_list:
-                target_x,target_y = pixel[0], pixel[1]#get_xy(i, kplr_mask)
-                print target_x, target_y
-                if kplr_mask[target_x, target_y] > 0:
-                    pixel_mask = np.zeros((1024,1100), dtype=int)
-                    pixel_mask[target_x, target_y] = 1
-                    pixel_mask = pixel_mask[kplr_mask>0]
-                    target_flux = ffi[:,pixel_mask>0][:,0].astype(float)*gain_factor
-                    predictor_epoch_mask = np.ones(epoch_mask.shape[0])
-                    transit_mask = None
-                    #predictor_matrix = get_predictor_matrix_ffi(ffi, target_x, target_y, kplr_mask, num_predictor)
-                    predictor_matrix = get_predictor_matrix_ffi(ffi, target_x, target_y, kplr_mask, num_predictor, var_mask)*gain_factor
-                    pca = PCA(n_components=200)
-                    pca.fit(predictor_matrix)
-                    predictor_matrix = pca.transform(predictor_matrix)
+                fit_image = np.zeros((ffi.shape[0], pixel_list.shape[0]), dtype=float)
+                dif = np.zeros((ffi.shape[0], pixel_list.shape[0]), dtype=float)
+                i = 0
+                for pixel in pixel_list:
+                    target_x,target_y = pixel[0], pixel[1]#get_xy(i, kplr_mask)
+                    print target_x, target_y
+                    if kplr_mask[target_x, target_y] > 0:
+                        pixel_mask = np.zeros((1024,1100), dtype=int)
+                        pixel_mask[target_x, target_y] = 1
+                        pixel_mask = pixel_mask[kplr_mask>0]
+                        target_flux = ffi[:,pixel_mask>0][:,0].astype(float)*gain_factor
+                        predictor_epoch_mask = np.ones(epoch_mask.shape[0])
+                        transit_mask = None
+                        #predictor_matrix = get_predictor_matrix_ffi(ffi, target_x, target_y, kplr_mask, num_predictor)
+                        predictor_matrix = image.get_predictor_matrix_ffi(target_x, target_y, num_predictor, var_mask)*gain_factor
+                        
+                        if use_pca==True:
+                            pca = PCA(n_components=200)
+                            pca.fit(predictor_matrix)
+                            predictor_matrix = pca.transform(predictor_matrix)
+                        step = np.zeros((image.data_len, 1))
+                        step[300:950,0] = 1.
+                        step = None
 
-                    flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
-                        = get_fit_matrix_ffi(target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2, 0)
-                    result = fit_target_no_train(flux, kplr_mask, np.copy(predictor_matrix), None, target_epoch_mask[data_mask>0], None, l2_vector, thread_num, train_mask)
-                    print result[-1]
-                    fit_flux = np.dot(predictor_matrix, result)
-                    fit_image[target_epoch_mask>0,i] = fit_flux[:,0]
-                    dif[target_epoch_mask>0, i] = flux- fit_flux[:,0]
-                    #gc.collect()
-                else:
-                    fit_image[epoch_mask>0,i] = -1
-                    dif[epoch_mask>0,i] = np.nan
-                if i%2000 == 0:
-                    np.save(out_name_fit, fit_image)
-                    np.save(out_name_dif, dif)
-                i+=1
-        else:
-            fit_image = np.zeros((ffi.shape[0], kplr_mask.shape[0], kplr_mask.shape[1]), dtype=np.float32)-1
-            predictor_epoch_mask = np.ones(epoch_mask.shape[0])
-            transit_mask = None
-            predictor_matrix = get_predictor_matrix_pca(num_predictor)
+                        flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
+                            = get_fit_matrix_ffi(target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2, 0, 'lightcurve', step)
+                        print predictor_matrix.shape
+                        result = fit_target_no_train(flux, kplr_mask, np.copy(predictor_matrix), None, target_epoch_mask[data_mask>0], None, l2_vector, thread_num, train_mask)
+                        print result[-1], result[-2]
 
-            flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
-                = get_fit_matrix_ffi(ffi, epoch_mask, predictor_matrix, predictor_epoch_mask, l2, 0)
-            result = fit_target_no_train(flux, kplr_mask, np.copy(predictor_matrix), None, target_epoch_mask[data_mask>0], None, l2_vector, thread_num, train_mask)
-            fit_image[:,kplr_mask>0] = np.float32(np.dot(predictor_matrix, result))
-            np.save(out_name, fit_image)
-            gc.collect()
-            dif = np.zeros((ffi.shape[0], kplr_mask.shape[0], kplr_mask.shape[1]), dtype=np.float32)+np.nan
-            dif[:,:,:] = np.nan
-            dif[:,kplr_mask>0] = np.float32(ffi-fit_image[:,kplr_mask>0])
+                        fit_flux = np.dot(predictor_matrix, result)
+                        fit_image[target_epoch_mask>0,i] = fit_flux[:,0]
+                        dif[target_epoch_mask>0, i] = flux- fit_flux[:,0]
+
+                        #cpm_fit = np.dot(predictor_matrix[:,:-1], result[:-1])
+                        #dif[target_epoch_mask>0, i] = flux-cpm_fit[:,0]
+                        #gc.collect()
+                    else:
+                        fit_image[epoch_mask>0,i] = -1
+                        dif[epoch_mask>0,i] = np.nan
+                    if i%2000 == 0:
+                        np.save(out_name_fit, fit_image)
+                        np.save(out_name_dif, dif)
+                    i+=1
+            else:
+                fit_image = np.zeros((ffi.shape[0], kplr_mask.shape[0], kplr_mask.shape[1]), dtype=np.float32)-1
+                predictor_epoch_mask = np.ones(epoch_mask.shape[0])
+                transit_mask = None
+                predictor_matrix = get_predictor_matrix_pca(num_predictor)
+
+                flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
+                    = get_fit_matrix_ffi(ffi, epoch_mask, predictor_matrix, predictor_epoch_mask, l2, 0)
+                result = fit_target_no_train(flux, kplr_mask, np.copy(predictor_matrix), None, target_epoch_mask[data_mask>0], None, l2_vector, thread_num, train_mask)
+                fit_image[:,kplr_mask>0] = np.float32(np.dot(predictor_matrix, result))
+                np.save(out_name, fit_image)
+                gc.collect()
+                dif = np.zeros((ffi.shape[0], kplr_mask.shape[0], kplr_mask.shape[1]), dtype=np.float32)+np.nan
+                dif[:,:,:] = np.nan
+                dif[:,kplr_mask>0] = np.float32(ffi-fit_image[:,kplr_mask>0])
+                np.save(out_name_dif, dif)
+
+            np.save(out_name_fit, fit_image)
             np.save(out_name_dif, dif)
-
-        np.save(out_name_fit, fit_image)
-        np.save(out_name_dif, dif)
 
 #simulteanous
     if False:
