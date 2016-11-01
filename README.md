@@ -2,7 +2,7 @@
 Causal Pixel Model for K2 data
 
 # How to use
-- epic_number **int** k2 id
+- epic_number **int** k2 ID
 - campaign_number **int** 91 for phase a, 92 for phase b
 - number_of_predictors **int** number of the predictors pixels to use
 - l2_regularization **float** strength of l2 regularization
