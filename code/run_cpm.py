@@ -3,6 +3,7 @@ import sys
 import epic
 import numpy as np
 from sklearn.decomposition import PCA
+import argparse
 
 
 def run(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, input_dir, output_dir, pixel_list=None):
@@ -77,21 +78,52 @@ def run(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, 
 	np.save(output_dir+'/'+'%d-c%d_dif.npy'%(target_epic_num, camp), dif_file)
 
 def main():
+	parser = argparse.ArgumentParser(description='k2 CPM')
+	parser.add_argument('epic', nargs=1, type=int, help="epic number")
+	parser.add_argument('campaign', nargs=1, type=int, help="campaign number, 91 for phase a, 92 for phase b")
+	parser.add_argument('n_predictor', nargs=1, type=int, help="number of predictor pixels")
+	parser.add_argument('l2', nargs=1, type=float, help="strength of l2 regularization")
+	parser.add_argument('n_pca', nargs=1, type=int, help="number of the PCA components to use, if 0, no PCA")
+	parser.add_argument('distance', nargs=1, type=int, help="distance between target pixel and predictor pixels")
+	parser.add_argument('exclusion', nargs=1, type=int, help="how many rows and columns that are excluded around the target pixel")
+	parser.add_argument('input_dir', nargs=1, help="directory to store the output file")
+	parser.add_argument('output_dir', nargs=1, help="directory to the target pixel files")
+	parser.add_argument('-p', '--pixel', metavar='pixel_list', help="path to the pixel list file that specify list of pixels to be modelled." 
+																	"If not provided, the whole target pixel file will be modelled")
+	args = parser.parse_args()
+	print "epic number: {0}".format(args.epic[0])
+	print "campaign: {0}".format(args.campaign[0])
+	print "number of predictors: {0}".format(args.n_predictor[0])
+	print "l2 regularization: {0}".format(args.l2[0])
+	print "number of PCA components: {0}".format(args.n_pca[0])
+	print "distance: {0}".format(args.distance[0])
+	print "exclusion: {0}".format(args.exclusion[0])
+	print "directory of TPFs: {0}".format(args.input_dir[0])
+	print "output directory: {0}".format(args.output_dir[0])
+	'''
 	epic_num = int(sys.argv[1])
-	camp = int(sys.argv[2])
-	num_predictor = int(sys.argv[3])
+	campaign = int(sys.argv[2])
+	n_predictor = int(sys.argv[3])
 	l2 = float(sys.argv[4])
-	num_pca = int(sys.argv[5])
-	dis = int(sys.argv[6])
-	excl = int(sys.argv[7])
+	n_pca = int(sys.argv[5])
+	distance = int(sys.argv[6])
+	exclusion = int(sys.argv[7])
 	input_dir = sys.argv[8] #'/Users/dunwang/Desktop/k2c9b'
 	output_dir = sys.argv[9] #'/Users/dunwang/Desktop/k2c9b/tpf'
 	pixel_list =None
 	if len(sys.argv)>10:
 		pixel_file = sys.argv[10]
 		pixel_list = np.loadtxt(pixel_file, dtype=int)
+	'''
+	if args.pixel is not None:
+		pixel_list = np.loadtxt(args.pixel, dtype=int)
+		print "pixel list: {0}".format(args.pixel)
+	else:
+		pixel = None
+		print "full image"
 	flux_lim = (0.2, 1.5)
-	run(epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, input_dir, output_dir, pixel_list)
+	#run(epic_num, campaign, n_predictor, l2, n_pca, distance, exclusion, flux_lim, input_dir, output_dir, pixel_list)
+	run(args.epic[0], args.campaign[0], args.n_predictor[0], args.l2[0], args.n_pca[0], args.distance[0], args.exclusion[0], flux_lim, args.input_dir[0], args.output_dir[0], pixel_list)
 
 if __name__ == '__main__':
 	main()
