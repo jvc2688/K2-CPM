@@ -14,7 +14,7 @@ positional arguments:
   distance      int distance between target pixel and predictor pixels
   exclusion     int how many rows and columns that are excluded around the target pixel
   input_dir     str directory to the target pixel files
-  output_dir    str directory to store the output file
+  output_dir    str path to the output file
 
 optional arguments:
   -p [pixel_list], --pixel [pixel_list]
@@ -23,5 +23,5 @@ optional arguments:
 
 # Example
 ```
-$ python run_cpm.py 200069974 92 800 1e3 0 16 5 ./output ./tpf -p ./test_pixel.dat
+$ python run_cpm.py 200069974 92 800 1e3 0 16 5 ./tpf ./output/200069974 -p ./test_pixel.dat
 ```
