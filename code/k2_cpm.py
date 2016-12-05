@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from astropy.io import fits as pyfits
 import random
 import numpy as np
@@ -23,8 +25,8 @@ from scipy.optimize import minimize
 from sklearn.decomposition import PCA
 
 
-#help function to find the pixel mask
 def get_pixel_mask(flux, kplr_mask):
+    '''help function to find the pixel mask'''
     pixel_mask = np.isfinite(flux) & (flux!=0)
     pixel_mask[:, kplr_mask < 1] = False
     '''
@@ -35,22 +37,23 @@ def get_pixel_mask(flux, kplr_mask):
     '''
     return pixel_mask
 
-#help function to find the epoch mask
 def get_epoch_mask(pixel_mask, time, q):
+    '''help function to find the epoch mask'''
     foo = np.sum(np.sum((pixel_mask > 0), axis=2), axis=1)
     epoch_mask = (foo>0) & np.isfinite(time) & q 
     return epoch_mask
 
-#help function to load header from tpf
-def load_header(tpf):
+def load_header(tpf): # not used currently 
+    '''help function to load header from tpf'''
     with pyfits.open(tpf) as file:
         meta = file[1].header
         column = meta['1CRV4P']
         row = meta['2CRV4P']
     return row,column
 
-#help function to load data from tpf
-class tpf():
+
+class Tpf():
+    '''help function to load data from tpf'''
     def __init__(self, fn):
         # Load the data.
         hdu_list = pyfits.open(fn)
@@ -99,7 +102,7 @@ class tpf():
         try:
             return index[index_mask][0]
         except IndexError:
-            print("No data for (%d,%d)"%(x,y))
+            print("No data for ({0:d},{1:d})".format(x, y))
 
     def get_xy(self, i):
         try:
@@ -124,9 +127,9 @@ class tpf():
             tpfs.add(self)
 
         if self.tpfs == tpfs:
-            print 'the same'
+            print('the same')
         else:
-            print 'different'
+            print('different')
             self.tpfs = tpfs
             pixel_row = []
             pixel_col = []
@@ -163,12 +166,13 @@ class tpf():
 
         pixel_flux = self.pixel_flux[:,pixel_mask][:,dis_mask]
         predictor_flux = pixel_flux[:,index[:num]].astype(float)
-        #print predictor_flux.shape
+        #print(predictor_flux.shape)
 
         return predictor_flux, self.predictor_epoch_mask
 
-#get predictor matrix randomly from a set of tpfs
+
 def get_predictor_matrix(tpfs, num=None):
+    '''get predictor matrix randomly from a set of tpfs'''
     predictor_flux = []
     predictor_epoch_mask=1.
     for tpf in tpfs:
@@ -185,7 +189,7 @@ def get_predictor_matrix(tpfs, num=None):
 
     return predictor_matrix, predictor_epoch_mask
 
-def get_fit_matrix(target_flux, target_flux_err, target_epoch_mask, predictor_matrix, predictor_epoch_mask, l2, time, poly=0, prefix='lightcurve'):
+def get_fit_matrix(target_flux, target_flux_err, target_epoch_mask, predictor_matrix, predictor_epoch_mask, l2, time, poly=0, prefix='lightcurve'):  # not used currently
     """
     ## inputs:
     - `target_flux` - target flux
@@ -230,7 +234,7 @@ def get_fit_matrix(target_flux, target_flux_err, target_epoch_mask, predictor_ma
     
     #construct l2 vectors
     predictor_num = predictor_matrix.shape[1]
-    print predictor_num
+    print(predictor_num)
     auto_pixel_num = 0
     l2_vector = np.ones(predictor_num, dtype=float)*l2
 
@@ -259,11 +263,11 @@ def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, ti
     - prefix.npy file - fitting fluxes of pixels
     """
     '''
-    filename = "./%s"%prefix
+    filename = "./{0:s}".format(prefix)
     dir = os.path.dirname(filename)
     if not os.path.exists(dir):
         os.makedirs(dir)
-    f = h5py.File('%s.hdf5'%prefix, 'a')
+    f = h5py.File('{0:s}.hdf5'.format(prefix), 'a')
     cpm_info = f['/cpm_info']
     data_group = f['/data']
     cpm_info['margin'] = margin
@@ -273,7 +277,7 @@ def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, ti
         target_flux = target_flux[train_mask>0]
         if covar_list is not None:
             covar_list = covar_list[train_mask>0]
-        #print predictor_matrix.shape
+        #print(predictor_matrix.shape)
     if covar_list is not None:
         covar = covar_list**2
     else:
@@ -292,7 +296,7 @@ def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, ti
     return result
 
 
-def pixel_plot(time, flux, name, size=None):
+def pixel_plot(time, flux, name, size=None):  # not used currently
     shape = flux.shape
     if size==None:
         x = range(0, shape[1])
@@ -317,52 +321,37 @@ def pixel_plot(time, flux, name, size=None):
 
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None,
                     wspace=0, hspace=0)
-    plt.suptitle('%s'%(name))
-    plt.savefig('../plots/%s.png'%(name), dpi=190)
+    plt.suptitle('{0:s}'.format(name))
+    plt.savefig('../plots/{0:s}.png'.format(name), dpi=190)
     plt.clf()
 
-def load_var(filename):
+def load_var(filename):  # not used currently
     #dtype = [('ID', int), ('ra', float), ('dec', float), ('p', float), ('type', np.unicode)]
     var = np.loadtxt(filename, skiprows=1, usecols=[0,1,2,3,4,5,6,7])
     types = np.loadtxt(filename, skiprows=1, usecols=[11], dtype=np.str)
     return var,types
 
-def load_k2_var(filename):
+def load_k2_var(filename):  # not used currently
     var = np.loadtxt(filename, usecols=[0,1,2,3,4,5,6,7,8,9])
     return var
 
-def fold_lc(t0, p, flux, time, epoch_mask):
+def fold_lc(t0, p, flux, time, epoch_mask):  # not used currently
     flux = flux[epoch_mask>0]
     length = flux.shape[0]
     fold_flux = np.zeros(length)
     fold_time = np.zeros(length)
     for i in range(length):
-        fold_time[i] = (time[i]+t0)-int((time[i]+t0)/p)*p
+        fold_time[i] = (time[i]+t0)-int((time[i]+t0)/p)*p # RP: normally we use t_i-t_0, not t_i+t_0
     return fold_time
 
 def get_xy(i, kplr_mask):
-    print i
+    print(i)
     index_matrix = np.arange(kplr_mask.flatten().shape[0])
     masked_index = index_matrix[kplr_mask.flatten()>0]
     index = masked_index[i]
     x = index/kplr_mask.shape[1]
     y = index-x*kplr_mask.shape[1]
     return x,y
-
-def load_var(filename):
-    #dtype = [('ID', int), ('ra', float), ('dec', float), ('p', float), ('type', np.unicode)]
-    var = np.loadtxt(filename, skiprows=1, usecols=[0,1,2,3,4,5,6,7])
-    types = np.loadtxt(filename, skiprows=1, usecols=[11], dtype=np.str)
-    return var,types
-
-def fold_lc(t0, p, flux, time, epoch_mask):
-    flux = flux[epoch_mask>0]
-    length = flux.shape[0]
-    fold_flux = np.zeros(length)
-    fold_time = np.zeros(length)
-    for i in range(length):
-        fold_time[i] = (time[i]+t0)-int((time[i]+t0)/p)*p
-    return fold_time
 
 def get_pixel_mask_ffi(ffi):
     pixel_mask = np.zeros(ffi.shape, dtype=int)
@@ -390,7 +379,7 @@ def load_ffi(name):
     epoch_mask = get_epoch_mask_ffi(pixel_mask)
     kplr_mask = get_kplr_mask_ffi(pixel_mask)
 
-    print pixel_mask.shape, epoch_mask.shape, kplr_mask.shape
+    print(pixel_mask.shape, epoch_mask.shape, kplr_mask.shape)
     pixel_mask = None
 
     ffi = ffi[:,kplr_mask>0]
@@ -455,12 +444,12 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predict
 
     #construct l2 vectors
     predictor_num = predictor_matrix.shape[1]
-    #print predictor_num
+    #print(predictor_num)
     auto_pixel_num = 0
     l2_vector = np.ones(predictor_num, dtype=float)*l2
 
     predictor_num = predictor_matrix.shape[1]
-    #print predictor_num
+    #print(predictor_num)
 
 
     #print('load matrix successfully')
@@ -472,65 +461,66 @@ def V(u_min, t_0, t_E, t):
     V = ((u * u + 2.) / (u * np.sqrt(u * u + 4.)) - 1.)
     return V
 
-def objective(para, t, kplr_mask, target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2):
+def objective(para, t, kplr_mask, target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2):  # not used currently
     u_min, t_0, t_E = para[0], para[1], para[2]
-    #print u_min, t_0, t_E
+    #print(u_min, t_0, t_E)
     thread_num = 1
     ml = np.array([V(u_min, t_0, t_E, t)]).T
 
     flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
                     = get_fit_matrix_ffi(target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2, 0, 'lightcurve', ml)
 
-    #print flux.shape
+    #print(flux.shape)
     result = fit_target_no_train(flux, kplr_mask, np.copy(predictor_matrix), None, target_epoch_mask[data_mask>0], None, l2_vector, thread_num)
-    #print result[-1]
+    #print(result[-1])
     fit_flux = np.dot(predictor_matrix, result)[:,0]
-    #print fit_flux.shape
+    #print(fit_flux.shape)
     cpm = np.dot(predictor_matrix[:,:-1], result[:-1])[:,0]
     dif = flux-fit_flux
     dif_cpm = flux - cpm
 
     '''
-    print dif_cpm.shape
+    print(dif_cpm.shape)
     plt.plot(dif_cpm, '.k')
     plt.show()
     '''
 
     error = np.sum(np.square(flux-fit_flux))
-    #print error
+    #print(error)
 
     return error
 
-def objective_coadd(para, t, kplr_mask, target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2):
+def objective_coadd(para, t, kplr_mask, target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2):  # not used currently
     u_min, t_0, t_E = para[0], para[1], para[2]
-    #print u_min, t_0, t_E
+    #print(u_min, t_0, t_E)
     thread_num = 1
     ml = np.array([V(u_min, t_0, t_E, t)]).T
 
     flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
                     = get_fit_matrix_ffi(target_flux, epoch_mask, predictor_matrix, predictor_epoch_mask, l2, 0, 'lightcurve', ml)
 
-    #print flux.shape
+    #print(flux.shape)
     result = fit_target_no_train(flux, kplr_mask, np.copy(predictor_matrix), None, target_epoch_mask[data_mask>0], None, l2_vector, thread_num)
-    #print result[-1]
+    #print(result[-1])
     fit_flux = np.sum(np.dot(predictor_matrix, result), axis=1)
-    #print fit_flux.shape
+    #print(fit_flux.shape)
     #cpm = np.dot(predictor_matrix[:,:-1], result[:-1])[:,0]
     #dif = flux-fit_flux
     #dif_cpm = flux - cpm
 
     '''
-    print dif_cpm.shape
+    print(dif_cpm.shape)
     plt.plot(dif_cpm, '.k')
     plt.show()
     '''
 
     error = np.sum(np.square(np.sum(flux, axis=1)-fit_flux))
-    #print error
+    #print(error)
 
     return error
 
-class cpm:
+
+class Cpm: # class not used currently
     def __init__(self, data_file, pixel, var_file=None, train_start=0, train_end=0):
         if var_file is not None:
             var_mask = np.load(var_file)
@@ -557,7 +547,7 @@ class cpm:
         pca.fit(predictor_matrix)
         self.predictor_matrix = pca.transform(predictor_matrix)
 
-    def fit_lc(self, ml):
+    def fit_lc(self, ml):  # not used currently
         ml = np.array([ml]).T
         flux, predictor_matrix, flux_err, l2_vector, target_epoch_mask, data_mask \
                         = get_fit_matrix_ffi(self.target_flux, self.epoch_mask, self.predictor_matrix, self.predictor_epoch_mask, self.l2, 0, 'lightcurve', ml)
@@ -568,16 +558,17 @@ class cpm:
 
         return ml_fit
 
-class Image:
+
+class Image: # class not used currently
     def __init__(self, data_file):
         self.ffi, self.kplr_mask, self.epoch_mask = load_ffi(data_file)
         self.med_flux = np.median(self.ffi, axis=0)
         gc.collect()
         self.data_len = self.ffi.shape[0]
-        print 'ffi shape:'
-        print self.ffi.shape
+        print('ffi shape:')
+        print(self.ffi.shape)
 
-    def get_predictor_matrix_ffi_bright(self, x, y, num, var_mask=None):
+    def get_predictor_matrix_ffi_bright(self, x, y, num, var_mask=None):  # not used currently
         x_lim = self.kplr_mask.shape[0]
         y_lim = self.kplr_mask.shape[1]
         kplr_mask = self.kplr_mask
@@ -621,7 +612,7 @@ class Image:
 
         '''
         predictor_mask = predictor_mask.reshape((x_lim,y_lim))
-        print predictor_mask.shape
+        print(predictor_mask.shape)
         plt.imshow(predictor_mask, interpolation='None', cmap=plt.get_cmap('Greys'))
         plt.colorbar()
         plt.show()
@@ -631,8 +622,8 @@ class Image:
         predictor_mask[index[num:]] = 0
 
         predictor_matrix = ffi[:, predictor_mask>0].astype(float)
-        print 'predictor matrix:'
-        print predictor_matrix.shape
+        print('predictor matrix:')
+        print(predictor_matrix.shape)
 
         return predictor_matrix
 
@@ -680,3 +671,4 @@ class Image:
 
 if __name__ == "__main__":
     pass
+

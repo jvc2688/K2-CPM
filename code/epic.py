@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import requests
 import json
 import urllib
@@ -17,8 +19,8 @@ def load_tpf(ID, camp, dire):
     d2 = ID % 100000
     d1 = ID-d2
     d2 -= d3
-    file_name = 'ktwo%d-c%d_lpd-targ.fits.gz'%(ID, camp)
+    file_name = 'ktwo{0:d}-c{1:d}_lpd-targ.fits.gz'.format(ID, camp)
     if not os.path.isfile(dire+'/'+file_name):
-        load_url = 'http://archive.stsci.edu/missions/k2/target_pixel_files/c%d/%d/%05d/ktwo%d-c%d_lpd-targ.fits.gz'%(camp,d1,d2,ID,camp)
+        load_url = 'http://archive.stsci.edu/missions/k2/target_pixel_files/c{0:d}/{1:d}/{2:05d}/ktwo{3:d}-c{4:d}_lpd-targ.fits.gz'.format(camp, d1, d2, ID, camp)
         tpf_file = urllib.URLopener()
         tpf_file.retrieve(load_url, dire+'/'+file_name)
