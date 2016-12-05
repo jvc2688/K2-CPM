@@ -1,5 +1,9 @@
 data/
 plots/
 hdf5/
+movie/
+code/others/
+*.ipynb
+*.dat
 *.png
 *.pyc
