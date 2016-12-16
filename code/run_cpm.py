@@ -6,9 +6,57 @@ import epic
 import numpy as np
 from sklearn.decomposition import PCA
 import argparse
+from astropy.io import fits as pyfits
+
+def write2fits(time, data, tpf, out_file, cpm_set):
+	table = np.core.records.fromarrays([time, data], dtype=[('TIME', '>f8'), ('FLUX_DIF', '>f4', (data.shape[1],data.shape[2]))])
+	hdub = pyfits.BinTableHDU.from_columns([pyfits.Column(name='TIME', format='D',unit='JD', array=time), pyfits.Column(name='FLUX_DIF',format='{0}E'.format(data.shape[1]*data.shape[2]), unit='e-/s', dim='({0},{1})'.format(data.shape[1], data.shape[2]), array=data)])
+
+	tpf_hdu_list = pyfits.open(tpf)
+	tpf_header = tpf_hdu_list[1].header
+	
+	prihdu = pyfits.PrimaryHDU()
+	hdulist = pyfits.HDUList([prihdu, hdub, tpf_hdu_list[2]])
+	hdulist.writeto(out_file)
+	
+	with pyfits.open(out_file, mode='update') as hdul:
+		header = hdul[1].header                                                                                                                                                                                                      
+		header.comments['TTYPE1'] = 'column title: data time stamps'
+		header.comments['TFORM1'] = 'column format: 64-bit floating point' 
+		header.comments['TTYPE1'] = 'column units: JD'
+
+		header.comments['TTYPE2'] = 'column title: CPM difference pixel flux'
+		header.comments['TTYPE2'] = 'column units: electrons per second'
+		header['WCSN2P'] = 'PHYSICAL'
+		header.comments['WCSN2P'] = 'table column WCS name'
+		header['WCAX2P'] = 2 
+		header.comments['WCAX2P'] = 'table column physical WCS dimensions'
+
+
+		header['1CTYP2'] = tpf_header['1CTYP5']
+		header['2CTYP2'] = tpf_header['2CTYP5']
+		header['1CRPX2'] = tpf_header['1CRPX5']
+		header['2CRPX2'] = tpf_header['2CRPX5']
+		header['1CRVL2'] = tpf_header['1CRVL5']
+		header['2CRVL2'] = tpf_header['2CRVL5']
+		header['1CUNI2'] = tpf_header['1CUNI5']
+		header['2CUNI2'] = tpf_header['2CUNI5']
+		header['1CDLT2'] = tpf_header['1CDLT5']
+		header['2CDLT2'] = tpf_header['2CDLT5']
+		header['11PC2'] = tpf_header['11PC5']
+		header['12PC2'] = tpf_header['12PC5']
+		header['21PC2'] = tpf_header['21PC5']
+		header['22PC2'] = tpf_header['22PC5']
+		header['TELESCOP'] = 'Kepler'                                                                                
+		header['OBJECT'] = tpf_header['OBJECT']                  
+		header['KEPLERID'] = tpf_header['KEPLERID']
+
+		for key in cpm_set.keys():
+			header[key] = cpm_set[key]
 
 
 def run(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, input_dir, output_dir, pixel_list=None, train_lim=None):
+
 	epic.load_tpf(target_epic_num, camp, input_dir)
 	file_name = input_dir+'/'+'ktwo{0:d}-c{1:d}_lpd-targ.fits.gz'.format(target_epic_num, camp)
 	tpf = k2cpm.Tpf(file_name)
@@ -92,8 +140,14 @@ def run(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, 
 			fit_file[target_epoch_mask, pixel_idx] = fit_flux[:,0]
 			dif_file[target_epoch_mask, pixel_idx] = dif
 		pixel_idx += 1
-	np.save(output_dir+'-fit.npy', fit_file)
-	np.save(output_dir+'-dif.npy', dif_file)
+	#np.save(output_dir+'-fit.npy', fit_file)
+	#np.save(output_dir+'-dif.npy', dif_file)
+	if data_len == kplr_mask.shape[0]*kplr_mask.shape[1]:
+		dif_file = def_file.reshape((tpf.flux.shape[0], kplr_mask.shape[0], kplr_mask.shape[1]))
+	else:
+		dif_file = def_file.reshape((tpf.flux.shape[0], data_len, 1))
+	cpm_set = {'Np': num_predictor, 'l2':l2, 'num_pca': num_pca, 'dis':dis, 'excl': excl, 'flux_lim':'{0}'.format(flux_lim), 'Tlim':'{0}'.format(train_lim)}
+	write2fits(time, dif_file, input_dir+'/'+'ktwo{0:d}-c{1:d}_lpd-targ.fits.gz'.format(target_epic_num, camp), output_dir+'-dif.fits', cpm_set)
 
 def main():
 	parser = argparse.ArgumentParser(description='k2 CPM')
@@ -130,7 +184,7 @@ def main():
 	flux_lim = (0.2, 1.5)
 
 	if args.train is not None:
-		train_lim = [float(args.train[0]), float(args.train[1])]
+		train_lim = (float(args.train[0]), float(args.train[1]))
 		print("train limit: {0}".format(train_lim)) 
 	else:
 		trian_lim = None
