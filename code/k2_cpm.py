@@ -244,7 +244,7 @@ def get_fit_matrix(target_flux, target_flux_err, target_epoch_mask, predictor_ma
 
 
 
-def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask, covar_list, l2_vector=None, thread_num=1, train_mask=None):
+def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask, covar_list, l2_vector=None, thread_num=1, train_lim=None):
     """
     ## inputs:
     - `target_flux` - target flux
@@ -272,12 +272,14 @@ def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, ti
     data_group = f['/data']
     cpm_info['margin'] = margin
     '''
-    if train_mask is not None:
-        predictor_flux_matrix = predictor_flux_matrix[train_mask>0,:]
-        target_flux = target_flux[train_mask>0]
+    if train_lim is not None:
+        train_mask = (time<train_lim[0]) | (time>train_lim[1])
+        predictor_flux_matrix = predictor_flux_matrix[train_mask,:]
+        target_flux = target_flux[train_mask]
         if covar_list is not None:
-            covar_list = covar_list[train_mask>0]
-        #print(predictor_matrix.shape)
+            covar_list = covar_list[train_mask]
+    print(predictor_flux_matrix.shape)
+
     if covar_list is not None:
         covar = covar_list**2
     else:
@@ -388,7 +390,7 @@ def load_ffi(name):
 
     return ffi, kplr_mask, epoch_mask
 
-def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predictor_epoch_mask, l2, poly=0, prefix='lightcurve', ml=None):
+def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predictor_epoch_mask, l2, time, poly=0, ml=None):
     """
     ## inputs:
     - `target_flux` - target flux
@@ -420,6 +422,7 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predict
     co_mask = data_mask*epoch_mask
     target_flux = target_flux[co_mask>0]
     predictor_matrix = predictor_matrix[co_mask>0, :]
+    time = time[co_mask>0]
 
     #series = []
     #time = np.arange(predictor_matrix.shape[0]).astype(float)
@@ -454,7 +457,7 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predict
 
     #print('load matrix successfully')
 
-    return target_flux, predictor_matrix, None, l2_vector, epoch_mask, data_mask
+    return target_flux, predictor_matrix, None, l2_vector, time, epoch_mask, data_mask
 
 def V(u_min, t_0, t_E, t):
     u = np.sqrt(u_min * u_min + ((t - t_0) / t_E) ** 2)
