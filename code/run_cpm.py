@@ -135,7 +135,7 @@ def main():
 	else:
 		trian_lim = None
 		print("all data used")
-	#run(args.epic[0], args.campaign[0], args.n_predictor[0], args.l2[0], args.n_pca[0], args.distance[0], args.exclusion[0], flux_lim, args.input_dir[0], args.output_dir[0], pixel_list, train_lim)
+	run(args.epic[0], args.campaign[0], args.n_predictor[0], args.l2[0], args.n_pca[0], args.distance[0], args.exclusion[0], flux_lim, args.input_dir[0], args.output_dir[0], pixel_list, train_lim)
 
 if __name__ == '__main__':
 	main()
