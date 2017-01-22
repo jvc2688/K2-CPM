@@ -37,12 +37,29 @@ class WcsFromTpf(object):
         """returns unique EPIC ids found around given sky position"""
         self._get_mask_around_radec(ra_deg, dec_deg, radius_arcmin)
         return [int(i) for i in set(self.epic[self._mask])]
+    
+    def get_nearest_pixel_radec(self, ra_deg, dec_deg):
+        """find pixel nearest to given RA/Dec"""
+        position = SkyCoord(ra_deg*u.deg, dec_deg*u.deg)
+        distances = position.separation(self._skycoord)
+        i = np.argmin(distances)
+        return (self.pix_x[i], self.pix_y[i], self.ra[i], self.dec[i], self.epic[i], distances[i].to(u.arcsec))
 
 if __name__ == '__main__':
     """example usage"""
     wcs = WcsFromTpf(31, 92)
     list_1 = wcs.get_epic_around_radec(269.013923, -28.227162, 0.12)
     list_2 = wcs.get_epic_around_radec(269.013923, -28.227162, 2.12)
+    print("narrow search:")
     print(list_1)
+    print("wider search:")
     print(list_2)
-    print(set(list_2).difference(list_1))
+    print("difference:")
+    print([i for i in set(list_2).difference(list_1)])
+    
+    results = wcs.get_nearest_pixel_radec(269.013923, -28.227162)
+    print(' ')
+    print('closest pixel: {:} {:}'.format(results[0], results[1]))
+    print('its RA/Dec: {:} {:}'.format(results[2], results[3]))
+    print('EPIC ID: {:}'.format(results[4]))
+    print('distance: {:}'.format(results[5]))
