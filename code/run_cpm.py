@@ -142,10 +142,10 @@ def run(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, 
         pixel_idx += 1
     #np.save(output_dir+'-fit.npy', fit_file)
     #np.save(output_dir+'-dif.npy', dif_file)
-    if data_len == kplr_mask.shape[0]*kplr_mask.shape[1]:
-        dif_file = def_file.reshape((tpf.flux.shape[0], kplr_mask.shape[0], kplr_mask.shape[1]))
+    if data_len == tpf.kplr_mask.shape[0]*tpf.kplr_mask.shape[1]:
+        dif_file = dif_file.reshape((tpf.flux.shape[0], tpf.kplr_mask.shape[0], tpf.kplr_mask.shape[1]))
     else:
-        dif_file = def_file.reshape((tpf.flux.shape[0], data_len, 1))
+        dif_file = dif_file.reshape((tpf.flux.shape[0], data_len, 1))
     cpm_set = {'Np': num_predictor, 'l2':l2, 'num_pca': num_pca, 'dis':dis, 'excl': excl, 'flux_lim':'{0}'.format(flux_lim), 'Tlim':'{0}'.format(train_lim)}
     write2fits(time, dif_file, input_dir+'/'+'ktwo{0:d}-c{1:d}_lpd-targ.fits.gz'.format(target_epic_num, camp), output_dir+'-dif.fits', cpm_set)
 
