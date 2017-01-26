@@ -105,7 +105,7 @@ class Tpf():
 
     def get_predictor_matrix(self, target_x, target_y, num, dis=16, excl=5, flux_lim=(0.8, 1.2), tpfs=None, var_mask=None):
         print('new')
-        if tpfs==None:
+        if tpfs is None:
             tpfs = set([self])
         else:
             tpfs = set(tpfs)
@@ -254,7 +254,7 @@ def get_data(target_epic_num, camp, num_predictor, num_pca, dis, excl, flux_lim,
             epic.load_tpf(int(epic_num), camp, input_dir)
             tpfs.append(Tpf(input_dir+'/'+'ktwo{0}-c{1}_lpd-targ.fits.gz'.format(int(epic_num), camp)))
 
-    if pixel_list == None:
+    if pixel_list is None:
         print('no pixel list, run cpm on full tpf')
         pixel_list = np.array([np.repeat(np.arange(shape[0]), shape[1]), np.tile(np.arange(shape[1]), shape[0])], dtype=int).T
     data_list = []

@@ -81,7 +81,7 @@ def run(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, 
             epic.load_tpf(int(epic_num), camp, input_dir)
             tpfs.append(k2cpm.Tpf(input_dir+'/'+'ktwo{0}-c{1}_lpd-targ.fits.gz'.format(int(epic_num), camp)))
 
-    if pixel_list == None:
+    if pixel_list is None:
         print('no pixel list, run cpm on full tpf')
         pixel_list = np.array([np.repeat(np.arange(shape[0]), shape[1]), np.tile(np.arange(shape[1]), shape[0])], dtype=int).T
         pixel_list += np.array([tpf.ref_row, tpf.ref_col])
