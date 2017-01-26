@@ -84,6 +84,7 @@ def run(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, 
     if pixel_list == None:
         print('no pixel list, run cpm on full tpf')
         pixel_list = np.array([np.repeat(np.arange(shape[0]), shape[1]), np.tile(np.arange(shape[1]), shape[0])], dtype=int).T
+        pixel_list += np.array([tpf.ref_row, tpf.ref_col])
     data_len = pixel_list.shape[0]
     dif_file = np.zeros([tpf.flux.shape[0], data_len])+np.nan
     fit_file = np.zeros([tpf.flux.shape[0], data_len])
