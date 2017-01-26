@@ -89,8 +89,8 @@ def run(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, 
     fit_file = np.zeros([tpf.flux.shape[0], data_len])
     pixel_idx = 0
     for pixel in pixel_list:
-        x = pixel[0]
-        y = pixel[1]
+        x = pixel[0]-tpf.ref_row
+        y = pixel[1]-tpf.ref_col
         print(x, y)
         if (x<0) or (x>=tpf.kplr_mask.shape[0]) or (y<0) or (y>=tpf.kplr_mask.shape[1]):
             print('pixel out of range')
@@ -147,7 +147,7 @@ def run(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, 
     else:
         dif_file = dif_file.reshape((tpf.flux.shape[0], data_len, 1))
     cpm_set = {'Np': num_predictor, 'l2':l2, 'num_pca': num_pca, 'dis':dis, 'excl': excl, 'flux_lim':'{0}'.format(flux_lim), 'Tlim':'{0}'.format(train_lim)}
-    write2fits(time, dif_file, input_dir+'/'+'ktwo{0:d}-c{1:d}_lpd-targ.fits.gz'.format(target_epic_num, camp), output_dir+'-dif.fits', cpm_set)
+    write2fits(tpf.time, dif_file, input_dir+'/'+'ktwo{0:d}-c{1:d}_lpd-targ.fits.gz'.format(target_epic_num, camp), output_dir+'-dif.fits', cpm_set)
 
 def main():
     parser = argparse.ArgumentParser(description='k2 CPM')
@@ -176,7 +176,7 @@ def main():
     print("output directory: {0}".format(args.output_dir[0]))
 
     if args.pixel is not None:
-        pixel_list = np.loadtxt(args.pixel, dtype=int)
+        pixel_list = np.loadtxt(args.pixel, dtype=int, ndmin=2)
         print("pixel list: {0}".format(args.pixel))
     else:
         pixel_list = None
