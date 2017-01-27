@@ -120,7 +120,7 @@ class Tpf():
 
     def get_predictor_matrix(self, target_x, target_y, num, dis=16, excl=5, flux_lim=(0.8, 1.2), tpfs=None, var_mask=None):
 
-        if tpfs==None:
+        if tpfs is None:
             tpfs = set([self])
         else:
             tpfs = set(tpfs)
@@ -300,7 +300,7 @@ def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, ti
 
 def pixel_plot(time, flux, name, size=None):  # not used currently
     shape = flux.shape
-    if size==None:
+    if size is None:
         x = range(0, shape[1])
         y = range(0, shape[2])
     else:
