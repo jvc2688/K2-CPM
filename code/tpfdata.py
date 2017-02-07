@@ -2,12 +2,15 @@
 import os
 import numpy as np
 import urllib
+from sklearn.decomposition import PCA
 
 from astropy.io import fits as pyfits
 
+import channelinfo
+
 
 class TpfData(object):
-    """handles data read from TPF files"""
+    """handles data read from TPF file"""
 
     directory = None
 
@@ -130,26 +133,81 @@ class TpfData(object):
         except IndexError:
             raise IndexError('No data for ({0:d},{1:d})'.format(x, y)) # I'm not sure how we would like to handle this type of an error
     
-    def get_predictor_matrix(self, target_x, target_y, multiple_tpf, n_predictor_pixel=100, exclusion_range=5, flux_lim_ratio_median=(0.8, 1.2)):
+    def get_predictor_matrix(self, target_x, target_y, multiple_tpf, n_predictor_pixel=100, exclude_columns=1, exclude_rows=None, distance_limit=16, flux_lim_ratio_median=(0.8, 1.2)):
         """prepare predictor matrix"""
         target_index = self._get_indexes_for_pixel(target_x, target_y)
         column_data = self.pixel_column[target_index]
         row_data = self.pixel_row[target_index]
 
         pixel_mask = np.ones_like(self.pixel_row, dtype=bool)
-        for delta_pixel in range(-exclusion_range, exclusion_range+1): # TO BE DONE: This loop removes data in a square, should be changed to circle.
-            pixel_mask &= (self.pixel_row != (row_data + delta_pixel))
-            pixel_mask &= (self.pixel_column != (column_data + delta_pixel))
+        if exclude_columns is not None: # exclude_columns = 0 would still remove a single column.
+            for delta_pixel in range(-exclude_columns, exclude_columns+1):
+                pixel_mask &= (self.pixel_column != (column_data + delta_pixel))
+        if exclude_rows is not None: # exclude_rows = 0 would still remove a single row.
+            for delta_pixel in range(-exclude_rows, exclude_rows+1):
+                pixel_mask &= (self.pixel_row != (row_data + delta_pixel))    
         if flux_lim_ratio_median[0] is not None:
             pixel_mask &= (self.median[target_index] * flux_lim_ratio_median[0] <= multiple_tpf.pixel_median)
         if flux_lim_ratio_median[1] is not None:
             pixel_mask &= (self.median[target_index] * flux_lim_ratio_median[1] <= multiple_tpf.pixel_median)
         
         distance_square = np.square(self.pixel_row[pixel_mask]-row_data) + np.square(self.pixel_column[pixel_mask]-column_data)
-        distance_mask = (distance_square > distance_limit**2) # I'm not sure how it differs from exclusion_range above. 
+        distance_mask = (distance_square > distance_limit**2)  
         distance_square = distance_square[distance_mask]
         index = np.argsort(distance_square)
         pixel_flux = multiple_tpf.pixel_flux[:,pixel_mask][:,distance_mask]
-        predictor_flux = pixel_flux[:,index[:n_predictor_pixel]].astype(float)
-        return predictor_flux
+        self.predictor_matrix = pixel_flux[:,index[:n_predictor_pixel]].astype(float)
+        # predictor_matrix was previously named predictor_flux
+
+    def get_predictor_matrix_adjust_median_limits(self, target_x, target_y, multiple_tpf, n_predictor_pixel=100, exclude_columns=1, exclude_rows=None, distance_limit=16, flux_lim_ratio_median_start=(0.8, 1.2), step_lower_limit=0.1, minimum_lower_limit=0.1, step_upper_limit=0.1):
+        """expands median flux ratio limits and calls get_predictor_matrix() until it gets enough stars"""
+        lower_limit = flux_lim_ratio_median_start[0]
+        upper_limit = flux_lim_ratio_median_start[1]
+        # TO DE DONE - The loop below should be modified - the condition (difference != 0) may be true at some point, but not true later i.e. with smaller lower_limit and higher upper_limit.
+        while True:
+            old_n_pixels_ok = self.predictor_matrix.shape[1]
+            lower_limit = np.max(lower_limit - step_lower_limit, minimum_lower_limit)
+            upper_limit = upper_limit + step_upper_limit
+            
+            self.get_predictor_matrix(target_x=target_x, target_y=target_y, multiple_tpf=multiple_tpf, n_predictor_pixel=n_predictor_pixel, exclude_columns=exclude_columns, exclude_rows=exclude_rows, distance_limit=distance_limit, flux_lim_ratio_median=(lower_limit, upper_limit))
+            
+            n_pixels_ok = self.predictor_matrix.shape[1]
+            if ((n_pixels_ok >= n_predictor_pixel) 
+               or (n_pixels_ok == old_n_pixels_ok)):
+                break
+
+    def remove_largest_from_set(self, input_set, except_largest):
+        """if set contains ids of very large TPF files, then remove those"""
+        huge_tpf = hugetpf.HugeTpf(n_huge=except_largest, campaign=self.campaign)
+        for epic_id in huge_tpf.huge_ids:
+            if epic_id in input_set:
+                input_set.remove(epic_id)
+
+    def get_predictor_matrix_expand(self, target_x, target_y, target_ra, target_dec, radius_start, except_largest, epic_list_start, multiple_tpf, n_predictor_pixel=100, exclude_columns=1, exclude_rows=None, distance_limit=16, flux_lim_ratio_median_start=(0.8, 1.2), step_radius=6, step_lower_limit=0.1, minimum_lower_limit=0.1, step_upper_limit=0.1):
+        """increase radius of search and also change median ratio flux limits trying to get to n_predictor_pixel pixels in predictor matrix"""
+        n_pixels_ok = self.predictor_matrix.shape[1]
+        channel_info = channelinfo.ChannelInfo(campaign=self.campaign, channel=int(self.channel))
+        channel_info.radius = radius_start
+        epic_list_old = epic_list_start
+        # TO BE DONE - The output of the loop below depends on many settings: exclude_columns, exclude_rows, step_radius, step_lower_limit, minimum_lower_limit, step_upper_limit... - THIS HAS TO BE CHANGED 
+        while n_pixels_ok < n_predictor_pixel:
+            channel_info.radius += step_radius
+            channel_info.epic_ids_near_ra_dec_fixed_radius(ra=target_ra, dec=target_dec, except_largest=except_largest)
+            epic_set_new = set(channel_info.epic_list)
+            new_epic_ids = epic_set_new.difference(epic_list_old)
+            if not new_epic_ids:
+                self.get_predictor_matrix_adjust_median_limits(self, target_x=target_x, target_y=target_y, multiple_tpf=multiple_tpf, n_predictor_pixel=n_predictor_pixel, exclude_columns=exclude_columns, exclude_rows=exclude_rows, distance_limit=distance_limit, flux_lim_ratio_median_start=flux_lim_ratio_median_start, step_lower_limit=step_lower_limit, minimum_lower_limit=minimum_lower_limit, step_upper_limit=step_upper_limit)
+                break
+            else: # When new_epic_ids is not empty.
+                self.remove_largest_from_set(new_epic_ids, except_largest=except_largest)
+                for epic_id in new_epic_ids:
+                    new_tpf_data = TpfData(epic_id=epic_id, campaign=self.campaign)
+                    multiple_tpf.add_tpf_data(new_tpf_data)
+                self.get_predictor_matrix(target_x=target_x, target_y=target_y, multiple_tpf=multiple_tpf, n_predictor_pixel=n_predictor_pixel, exclude_columns=exclude_columns, exclude_rows=exclude_rows, distance_limit=distance_limit, flux_lim_ratio_median=flux_lim_ratio_median_start)
+
+    def apply_pca_to_predictor_matrix(n_pca_components):
+        """apply Principal Component Analysis to predictor matrix"""
+        pca = PCA(n_components=n_pca_components)
+        pca.fit(self.predictor_matrix)
+        self.predictor_matrix = pca.transform(self.predictor_matrix)
 
