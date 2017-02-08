@@ -1,0 +1,1 @@
+python run_cpm.py 200071074 92 1600 1e3 200 16 5 ./test/input ./test/output/3 -p ./test/input/1-pixel.dat
