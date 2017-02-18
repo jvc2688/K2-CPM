@@ -2,12 +2,13 @@
 
 import numpy as np
 
-def load_matrix_xy(file_name):
+def load_matrix_xy(file_name, data_type='float'):
     """reads file with matrix in format like:
     0 0 123.454
     0 1 432.424
     ...
     into numpy array"""
+    parser = {'TRUE': True, 'FALSE': False}
     table_as_list = []
     with open(file_name) as infile:
         for line in infile.readlines():
@@ -18,7 +19,13 @@ def load_matrix_xy(file_name):
                 raise ValueError("incorrect line read from file {:} : {:}".format(file_name, line[:-1]))
             x = int(data[0])
             y = int(data[1])
-            value = float(data[2])
+            
+            if data_type == 'float':
+                value = float(data[2])
+            elif data_type == 'boolean':
+                value = parser[data[2].upper()]
+            else:
+                raise ValueError('Unknown data_type in load_matrix_xy()')
 
             if len(table_as_list) < x + 1:
                 for i in range(x+1-len(table_as_list)):
@@ -31,14 +38,24 @@ def load_matrix_xy(file_name):
 
     return np.array(table_as_list)
     
-def save_matrix_xy(matrix, file_name):
+def save_matrix_xy(matrix, file_name, data_type='float'):
     """saves numpy array (matrix) in format like:
     0 0 123.454
     0 1 432.424
     ...
     """
     with open(file_name, 'w') as out_file:
-        for (index, value) in np.ndenumerate(matrix):
-            out_file.write("{:} {:} {:.8f}\n".format(index[0], index[1], value))
+        if data_type == 'float':
+            for (index, value) in np.ndenumerate(matrix):
+                out_file.write("{:} {:} {:.8f}\n".format(index[0], index[1], value))
+        elif data_type == 'boolean':
+            parser = {1: "True", 0: "False"}
+            for (index, value) in np.ndenumerate(matrix):
+                out_file.write("{:} {:} {:}\n".format(index[0], index[1], parser[value]))
+        else:
+            raise ValueError('save_matrix_xy() - unrecognized format')
 
-
+if __name__ == '__main__':
+    m = np.loadtxt('1-fit_matrix_comp.datX')
+    save_matrix_xy(m, '1-fit_matrix_comp.dat.fmtX')
+    
