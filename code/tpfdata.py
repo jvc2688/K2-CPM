@@ -107,7 +107,7 @@ class TpfData(object):
     def get_flux_for_pixel(self, row, column):
         """extracts flux for a single pixel (all epochs) specified as row and column"""
         index = self._get_pixel_index(row, column)
-        return tpf.flux[:,index]
+        return self.flux[:,index]
     
     def save_pixel_curve(self, row, column, file_name, full_time=True):
         """saves the time vector and the flux for a single pixel into a file"""
