@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+import sys
 import numpy as np
 
 def load_matrix_xy(file_name, data_type='float'):
@@ -56,6 +57,9 @@ def save_matrix_xy(matrix, file_name, data_type='float'):
             raise ValueError('save_matrix_xy() - unrecognized format')
 
 if __name__ == '__main__':
-    m = np.loadtxt('1-fit_matrix_comp.datX')
-    save_matrix_xy(m, '1-fit_matrix_comp.dat.fmtX')
+    if len(sys.argv) != 3:
+        raise ValueError('\n\n 2 arguments required:\n1 - in file with standard matrix format\n2 - out file that will be in matrix_xy format')
+    
+    matrix = np.loadtxt(sys.argv[1])
+    save_matrix_xy(matrix, sys.argv[2])
     
