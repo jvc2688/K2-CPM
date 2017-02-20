@@ -8,7 +8,7 @@ Program cpm\_part2.py reads 5 different types of files:
 
 Note that the code is treated as a module so that it can be tested. Hence, you should add the directory to your PYTOHPATH before running it. Alternative approach is to search for all 'from code import' and modify them.
 
-There is a unit test file: test/test\_basic\_1.py. Unit tests can be executed e.g. by running py.test.
+There is a unit test file: test/test\_basic\_1.py. Unit tests can be executed e.g. by running py.test from test/.
 
 File tpfdata.py (and hence multipletpf.py) requires the directory with tpf files. Currently it is set to code/tpf/.
 
