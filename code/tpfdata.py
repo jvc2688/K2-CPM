@@ -2,16 +2,20 @@
 import os
 import numpy as np
 import urllib
+from sklearn.decomposition import PCA
 
 from astropy.io import fits as pyfits
 
+#import matrix_xy
+from code import matrix_xy
+
 
 class TpfData(object):
-    """handles data read from TPF files"""
+    """handles data read from TPF file"""
 
-    directory = None
+    directory = None # The directory where TPF files are stored.
 
-    def __init__(self, epic_id=None, campaign=None, file_name=None, load_data=True):
+    def __init__(self, epic_id=None, campaign=None, file_name=None):
         if (epic_id is None) != (campaign is None):
             raise ValueError('wrong parameters epic_id and campaign in TpfData.__init__()')
         if (file_name is not None) and (epic_id is not None):
@@ -20,8 +24,9 @@ class TpfData(object):
         self.campaign = campaign
         if file_name is None:
             file_name = self._guess_file_name()
-        if load_data:
-            self._load_data(file_name)  
+        self.file_name = file_name
+        self.verify_and_download()
+        self._load_data(self._path)
         self._column = None
         self._row = None
 
@@ -38,6 +43,7 @@ class TpfData(object):
         self.reference_column = hdu_list[2].header['CRVAL1P']
         self.reference_row = hdu_list[2].header['CRVAL2P']
         self.pixel_mask = hdu_list[2].data
+        self.mask = hdu_list[2].data
         
         data = hdu_list[1].data
         self.jd_short = data["time"] + 4833. # is it HJD, BJD, JD?
@@ -47,27 +53,24 @@ class TpfData(object):
         pixel_mask[:, self.pixel_mask < 1] = False
         self.pixel_mask = pixel_mask 
         quality_flags = data["quality"]
-        quality_flags_ok = ((quality_flags == 0) | (quality_flags == 8192) | (quality_flags == 16384) | (quality_flags == 24576)) # TO BE DONE - can someone check if these are the only flags we should remove? Should we change it to a parameter? 
+        # TO BE DONE - can someone check if these are the only flags we should remove? Should we change it to a parameter? 
+        quality_flags_ok = ((quality_flags == 0) | (quality_flags == 8192) | (quality_flags == 16384) | (quality_flags == 24576)) 
         foo = np.sum(np.sum((self.pixel_mask > 0), axis=2), axis=1) # Does anybody understand what is happening here?
         self.epoch_mask = (foo > 0) & np.isfinite(self.jd_short) & quality_flags_ok
-        flux = flux[:, self.pixel_mask>0]
-        if not all(np.isfinite(flux)):
+        flux = flux[:, self.mask>0]
+        if not np.isfinite(flux).all():
             raise ValueError('non-finite value in flux table of {:} - feature not done yet'.format(file_name))
             # TO BE DONE - code interpolation using e.g. k2_cpm.py lines: 89-92
         self.flux = flux
         self.median = np.median(flux, axis=0)
 
         hdu_list.close()
-# ra -> ra_object
-# dec -> dec_object
-# kplr_mask -> pixel_mask 
-# ref_row -> reference_row
-# ref_col -> reference_column
-# time -> jd_short
 
     @property
     def _path(self):
         """path to the TPF file"""
+        if TpfData.directory is None:
+            raise ValueError("TpfData.directory value not set")
         return TpfData.directory + '/' + self.file_name
 
     def verify_and_download(self):
@@ -83,73 +86,53 @@ class TpfData(object):
         url_retriver = urllib.URLopener()
         url_retriver.retrieve(url_to_load, self._path)
     
-    def get_position_inside(self, row, column):
-        """get position of (row, column) inside given TPF file; returns (None, None) if pixel is not in mask range"""
-        relative_row = row - self.reference_row # This is X in Dun's code.
-        relative_column = column - self.reference_column # This is Y in Dun's code.
-        if relative_row < 0 or relative_row >= self.pixel_mask.shape[0]:
-            return (None, None)
-        if relative_column < 0 or relative_column >= self.pixel_mask.shape[1]:
-            return (None, None)
-        return (relative_row, relative_column)
-
-    def check_row_column_pixel_mask(self, row, column):
-        """check if given (row, column) pixel has data taken (assuming you've choosen right TPF file!)"""
-        (relative_row, relative_column) = self.get_position_inside(row, column)
-        if relative_row is None:
-            return False
-        return bool(self.pixel_mask[relative_row, relative_column])
-
     def _make_column_row_vectors(self):
         """prepare vectors with some numbers"""
-        self._column = np.tile(np.arange(self.pixel_mask.shape[1], dtype=int), self.pixel_mask.shape[0]) + self.reference_column
-        self._column = self._column[self.pixel_mask.flatten()>0]
-        self._row = np.repeat(np.arange(self.pixel_mask.shape[0], dtype=int), self.pixel_mask.shape[1]) + self.reference_row
-        self._row = self._row[self.pixel_mask.flatten()>0]
+        self._column = np.tile(np.arange(self.mask.shape[1], dtype=int), self.mask.shape[0]) + self.reference_column
+        self._column = self._column[self.mask.flatten()>0]
+        self._row = np.repeat(np.arange(self.mask.shape[0], dtype=int), self.mask.shape[1]) + self.reference_row
+        self._row = self._row[self.mask.flatten()>0]
 
-    @property
-    def pixel_column(self):
-        """return pixel_column"""
-        if self._column is None:
+    def _get_pixel_index(self, row, column):
+        """finds index of given (row, column) pixel in given file - information necessary to extract flux"""
+        if (self._row is None) or (self._column is None):
             self._make_column_row_vectors()
-        return self._column
-
-    @property
-    def pixel_row(self):
-        """return pixel_row"""
-        if self._row is None:
-            self._make_column_row_vectors()
-        return self._row
-
-    def _get_indexes_for_pixel(self, x, y):
-        """find indexes in main tables that give all the epochs for given pixel"""
-        index = np.arange(self.pixel_row.shape[0])
-        index_mask = ((self.pixel_row - self.reference_row) == x) & ((self.pixel_column - self.reference_column) == y)
+        index = np.arange(self._row.shape[0])
+        index_mask = ((self._row == row) & (self._column == column))
         try:
-            return index[index_mask][0]
+            out = index[index_mask][0]
         except IndexError:
-            raise IndexError('No data for ({0:d},{1:d})'.format(x, y)) # I'm not sure how we would like to handle this type of an error
+            out = None
+        return out
+
+    def get_flux_for_pixel(self, row, column):
+        """extracts flux for a single pixel (all epochs) specified as row and column"""
+        index = self._get_pixel_index(row, column)
+        return self.flux[:,index]
     
-    def get_predictor_matrix(self, target_x, target_y, multiple_tpf, n_predictor_pixel=100, exclusion_range=5, flux_lim_ratio_median=(0.8, 1.2)):
-        """prepare predictor matrix"""
-        target_index = self._get_indexes_for_pixel(target_x, target_y)
-        column_data = self.pixel_column[target_index]
-        row_data = self.pixel_row[target_index]
+    def save_pixel_curve(self, row, column, file_name, full_time=True):
+        """saves the time vector and the flux for a single pixel into a file"""
+        flux = self.get_flux_for_pixel(row=row, column=column)
+        time = self.jd_short
+        if full_time:
+            time += 2450000.
+        np.savetxt(file_name, np.array([time, flux]).T, fmt="%.5f %.8f")
 
-        pixel_mask = np.ones_like(self.pixel_row, dtype=bool)
-        for delta_pixel in range(-exclusion_range, exclusion_range+1): # TO BE DONE: This loop removes data in a square, should be changed to circle.
-            pixel_mask &= (self.pixel_row != (row_data + delta_pixel))
-            pixel_mask &= (self.pixel_column != (column_data + delta_pixel))
-        if flux_lim_ratio_median[0] is not None:
-            pixel_mask &= (self.median[target_index] * flux_lim_ratio_median[0] <= multiple_tpf.pixel_median)
-        if flux_lim_ratio_median[1] is not None:
-            pixel_mask &= (self.median[target_index] * flux_lim_ratio_median[1] <= multiple_tpf.pixel_median)
-        
-        distance_square = np.square(self.pixel_row[pixel_mask]-row_data) + np.square(self.pixel_column[pixel_mask]-column_data)
-        distance_mask = (distance_square > distance_limit**2) # I'm not sure how it differs from exclusion_range above. 
-        distance_square = distance_square[distance_mask]
-        index = np.argsort(distance_square)
-        pixel_flux = multiple_tpf.pixel_flux[:,pixel_mask][:,distance_mask]
-        predictor_flux = pixel_flux[:,index[:n_predictor_pixel]].astype(float)
-        return predictor_flux
 
+if __name__ == '__main__':
+    epic_id = "200071074"
+    directory = 'tpf/'
+    campaign = 92 
+    pixel = [883, 670]
+    out_file_a = '1-pixel_flux.dat'
+    out_file_b = '1-mask.dat'
+    out_file_c = '1-epoch_mask.dat'
+    
+    TpfData.directory = directory
+    tpf = TpfData(epic_id=epic_id, campaign=campaign)
+    tpf.save_pixel_curve(pixel[0], pixel[1], file_name=out_file_a)
+
+    matrix_xy.save_matrix_xy(tpf.mask, out_file_b, data_type='boolean') # CHANGE THIS INTO TpfData.save_mask().
+    
+    np.savetxt(out_file_c, tpf.epoch_mask, fmt="%s") # CHANGE THIS INTO TpfData.save_epoch_mask().
+    
