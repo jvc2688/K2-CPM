@@ -1,19 +1,25 @@
 from __future__ import print_function
 
-import k2_cpm as k2cpm
 import sys
-import epic
 import numpy as np
 from sklearn.decomposition import PCA
 import argparse
 
+from code import k2_cpm as k2cpm
+from code import epic
+from code import matrix_xy
+
 
 def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl, 
-                    flux_lim, input_dir, pixel_list=None, train_lim=None):
+                    flux_lim, input_dir, pixel_list=None, train_lim=None, output_file=None):
 # REMOVED: l2, output_dir
-# ADDED:
+# ADDED: output_file
 #def run_cpm_part1(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, input_dir, output_dir, pixel_list=None, train_lim=None):
 
+    if pixel_list is not None:
+        if pixel_list.shape[0] != 1 and output_file is not None:
+            raise ValueError('\n\nCurrently we can deal with only a single pixel at a time if the output file is specified')
+        
     epic.load_tpf(target_epic_num, camp, input_dir)
     file_name = input_dir+'/'+'ktwo{0:d}-c{1:d}_lpd-targ.fits.gz'.format(target_epic_num, camp)
     tpf = k2cpm.Tpf(file_name)
@@ -85,6 +91,9 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                 pca = PCA(n_components=num_pca)
                 pca.fit(predictor_matrix)
                 predictor_matrix = pca.transform(predictor_matrix)
+                
+            if output_file is not None:
+                matrix_xy.save_matrix_xy(predictor_matrix, output_file)
 # SAVE predictor_matrix HERE !!!
 
 def main():
@@ -96,6 +105,7 @@ def main():
     parser.add_argument('distance', nargs=1, type=int, help="distance between target pixel and predictor pixels")
     parser.add_argument('exclusion', nargs=1, type=int, help="how many rows and columns that are excluded around the target pixel")
     parser.add_argument('input_dir', nargs=1, help="directory to store the output file")
+    parser.add_argument('output_file', nargs=1, help="output predicotr matrix file")
     parser.add_argument('-p', '--pixel', metavar='pixel_list', help="path to the pixel list file that specify list of pixels to be modelled." 
                                                                     "If not provided, the whole target pixel file will be modelled")
     parser.add_argument('-t', '--train', nargs=2, metavar='train_lim', help="lower and upper limit defining the training data set")
@@ -104,11 +114,12 @@ def main():
     print("epic number: {0}".format(args.epic[0]))
     print("campaign: {0}".format(args.campaign[0]))
     print("number of predictors: {0}".format(args.n_predictor[0]))
-    print("l2 regularization: {0}".format(args.l2[0]))
     print("number of PCA components: {0}".format(args.n_pca[0]))
     print("distance: {0}".format(args.distance[0]))
     print("exclusion: {0}".format(args.exclusion[0]))
     print("directory of TPFs: {0}".format(args.input_dir[0]))
+    print("output predictor_matrix file: {0}".format(args.output_file[0]))
+    # Variables flux_lim, pixel_list, amd train_lim and used later but not printed here.
 
     if args.pixel is not None:
         pixel_list = np.loadtxt(args.pixel, dtype=int, ndmin=2)
@@ -127,8 +138,8 @@ def main():
         
     run_cpm_part1(args.epic[0], args.campaign[0], args.n_predictor[0], 
                     args.n_pca[0], args.distance[0], args.exclusion[0], 
-                    flux_lim, args.input_dir[0], pixel_list, train_lim) 
+                    flux_lim, args.input_dir[0], pixel_list, train_lim,
+                    output_file=args.output_file[0]) 
 
 if __name__ == '__main__':
     main()
-
