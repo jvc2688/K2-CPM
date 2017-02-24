@@ -24,6 +24,5 @@ def test_cpm_part1():
 
     predictor_matrix = matrix_xy.load_matrix_xy(output_file)
     predictor_matrix_expected = matrix_xy.load_matrix_xy(expected_file)
-    np.testing.assert_almost_equal(predictor_matrix / predictor_matrix_expected, 1., decimal=3)
     np.testing.assert_almost_equal(predictor_matrix, predictor_matrix_expected, decimal=2)
 
