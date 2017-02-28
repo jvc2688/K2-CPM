@@ -3,7 +3,8 @@ import numpy as np
 
 #import k2_cpm
 #import matrix_xy
-from code import k2_cpm
+#from code import k2_cpm
+from code import k2_cpm_small
 from code import matrix_xy
 
 
@@ -45,9 +46,9 @@ def execute_cpm_part2(n_test=1):
     tpf_epoch_mask = read_true_false_file(epoch_mask_file_name)
     
     # Calculations:
-    fit_matrix_results = k2_cpm.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, pre_matrix, predictor_epoch_mask, l2, tpf_time, 0, None)
+    fit_matrix_results = k2_cpm_small.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, pre_matrix, predictor_epoch_mask, l2, tpf_time, 0, None)
     (target_flux, predictor_matrix, none_none, l2_vector, time, target_epoch_mask, data_mask) = fit_matrix_results
-    result = k2_cpm.fit_target_no_train(target_flux, pixel_mask, np.copy(predictor_matrix), time, target_epoch_mask[data_mask>0], None, l2_vector, 1, None)    
+    result = k2_cpm_small.fit_target_no_train(target_flux, pixel_mask, np.copy(predictor_matrix), time, target_epoch_mask[data_mask>0], None, l2_vector, 1, None)    
     fit_flux = np.dot(predictor_matrix, result)
     dif = target_flux - fit_flux[:,0]
 
