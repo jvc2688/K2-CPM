@@ -55,7 +55,7 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
     data_len = pixel_list.shape[0]
 
     out_predictor_matrixes = []
-    out_predictor_epoch_mask = []
+    out_predictor_epoch_masks = []
 
     for pixel in pixel_list:
         x = pixel[0]-tpf.ref_row
