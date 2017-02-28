@@ -47,8 +47,8 @@ def execute_cpm_part2(n_test=1):
     
     # Calculations:
     fit_matrix_results = k2_cpm_small.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, pre_matrix, predictor_epoch_mask, l2, tpf_time, 0, None)
-    (target_flux, predictor_matrix, none_none, l2_vector, time, target_epoch_mask, data_mask) = fit_matrix_results
-    result = k2_cpm_small.fit_target_no_train(target_flux, pixel_mask, np.copy(predictor_matrix), time, target_epoch_mask[data_mask>0], None, l2_vector, 1, None)    
+    (target_flux, predictor_matrix, none_none, l2_vector, time, target_epoch_mask) = fit_matrix_results
+    result = k2_cpm_small.fit_target_no_train(target_flux, pixel_mask, np.copy(predictor_matrix), time, target_epoch_mask, None, l2_vector, 1, None)
     fit_flux = np.dot(predictor_matrix, result)
     dif = target_flux - fit_flux[:,0]
 
