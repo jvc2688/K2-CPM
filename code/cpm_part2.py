@@ -17,10 +17,10 @@ def read_true_false_file(file_name):
             out.append(parser[line[:-1].upper()])
     return np.array(out)
 
-def cpm_part2(tpf_flux, tpf_epoch_mask, pre_matrix, predictor_epoch_mask, l2, tpf_time, pixel_mask):
+def cpm_part2(tpf_flux, tpf_epoch_mask, predictor_matrix, predictor_epoch_mask, l2, tpf_time, pixel_mask):
     """get predictor_matrix, run CPM, calculate dot product and difference of target_flux and fit_flux"""
     # run get_fit_matrix_ffi()
-    fit_matrix_results = k2_cpm_small.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, pre_matrix, predictor_epoch_mask, l2, tpf_time, 0, None)
+    fit_matrix_results = k2_cpm_small.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, predictor_matrix, predictor_epoch_mask, l2, tpf_time, 0, None)
 
     # decompose results of get_fit_matrix_ffi()
     (target_flux, predictor_matrix, none_none, l2_vector, time, target_epoch_mask) = fit_matrix_results
