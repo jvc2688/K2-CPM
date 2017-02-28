@@ -38,7 +38,6 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predict
     #construct l2 vectors
     l2_vector = np.ones(predictor_matrix.shape[1], dtype=float) * l2
 
-    #return target_flux, predictor_matrix, None, l2_vector, time, epoch_mask, epoch_mask
     return target_flux, predictor_matrix, None, l2_vector, time, epoch_mask
 
 def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask, covar_list, l2_vector=None, thread_num=1, train_lim=None):
