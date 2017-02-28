@@ -17,6 +17,22 @@ def read_true_false_file(file_name):
             out.append(parser[line[:-1].upper()])
     return np.array(out)
 
+def find_predictor_matrix_and_run_cpm(tpf_flux, tpf_epoch_mask, pre_matrix, predictor_epoch_mask, l2, tpf_time, pixel_mask):
+    """get predictor_matrix, run CPM, calculate dot product and difference of target_flux and fit_flux"""
+    # run get_fit_matrix_ffi()
+    fit_matrix_results = k2_cpm_small.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, pre_matrix, predictor_epoch_mask, l2, tpf_time, 0, None)
+
+    # decompose results of get_fit_matrix_ffi()
+    (target_flux, predictor_matrix, none_none, l2_vector, time, target_epoch_mask) = fit_matrix_results
+    
+    # run CPM:
+    result = k2_cpm_small.fit_target_no_train(target_flux, pixel_mask, np.copy(predictor_matrix), time, target_epoch_mask, None, l2_vector, 1, None)
+    
+    # final calculations:
+    fit_flux = np.dot(predictor_matrix, result)
+    dif = target_flux - fit_flux[:,0]
+    return (result, fit_flux, dif)
+
 
 def execute_cpm_part2(n_test=1):
     # settings:
@@ -46,11 +62,10 @@ def execute_cpm_part2(n_test=1):
     tpf_epoch_mask = read_true_false_file(epoch_mask_file_name)
     
     # Calculations:
-    fit_matrix_results = k2_cpm_small.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, pre_matrix, predictor_epoch_mask, l2, tpf_time, 0, None)
-    (target_flux, predictor_matrix, none_none, l2_vector, time, target_epoch_mask) = fit_matrix_results
-    result = k2_cpm_small.fit_target_no_train(target_flux, pixel_mask, np.copy(predictor_matrix), time, target_epoch_mask, None, l2_vector, 1, None)
-    fit_flux = np.dot(predictor_matrix, result)
-    dif = target_flux - fit_flux[:,0]
+    (result, fit_flux, dif) = find_predictor_matrix_and_run_cpm(tpf_flux, 
+                                                tpf_epoch_mask, pre_matrix, 
+                                                predictor_epoch_mask, l2, 
+                                                tpf_time, pixel_mask)
 
     # Save results:
     np.savetxt(result_file_name, result, fmt='%.8f')
