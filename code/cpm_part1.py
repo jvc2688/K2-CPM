@@ -8,6 +8,8 @@ import argparse
 from code import k2_cpm as k2cpm
 from code import epic
 from code import matrix_xy
+from code import multipletpf
+from code import tpfdata
 
 
 def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl, 
@@ -49,7 +51,9 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
         pixel_list = np.array([np.repeat(np.arange(shape[0]), shape[1]), np.tile(np.arange(shape[1]), shape[0])], dtype=int).T
         pixel_list += np.array([tpf.ref_row, tpf.ref_col])
     data_len = pixel_list.shape[0]
-    
+
+    out_predictor_matrixes = []
+
     for pixel in pixel_list:
         x = pixel[0]-tpf.ref_row
         y = pixel[1]-tpf.ref_col
@@ -92,9 +96,21 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                 pca.fit(predictor_matrix)
                 predictor_matrix = pca.transform(predictor_matrix)
                 
-            if output_file is not None:
+            if output_file is not None: 
                 matrix_xy.save_matrix_xy(predictor_matrix, output_file)
 # SAVE predictor_matrix HERE !!!
+                if False:
+                    tpf_set = multipletpf.MultipleTpf()
+                    tpfdata.TpfData.directory = "tpf/"
+                    for tpf in tpfs:
+                        new_tpf = tpfdata.TpfData(epic_id=tpf.kid, campaign=tpf.campaign)
+                        tpf_set.add_tpf_data(new_tpf)
+                    np.savetxt(output_file+"_epoch_mask", tpf_set.predictor_epoch_mask, fmt='%r')
+
+            out_predictor_matrixes.append(predictor_matrix)
+
+    return out_predictor_matrixes
+
 
 def main():
     parser = argparse.ArgumentParser(description='k2 CPM')
