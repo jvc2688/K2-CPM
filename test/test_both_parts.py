@@ -13,7 +13,6 @@ def do_test_cpm_part1_and_part2(n_test_compare,
         pixel_list=np.array([[883, 670]]), 
         train_lim=None, l2=1000.):
     """test both cpm_part1 and cpm_part2"""
-    assert pixel_list.shape[0] == 1, 'this version accepts only single pixel in pixel_list'
 
     file_expect_result = 'output/expected/{:}-result.dat'.format(n_test_compare)
     expect_result = np.loadtxt(file_expect_result)
