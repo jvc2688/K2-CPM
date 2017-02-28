@@ -13,9 +13,11 @@ from code import tpfdata
 
 
 def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl, 
-                    flux_lim, input_dir, pixel_list=None, train_lim=None, output_file=None):
+                    flux_lim, input_dir, pixel_list=None, train_lim=None, 
+                    output_file=None, 
+                    return_predictor_epoch_masks=False):
 # REMOVED: l2, output_dir
-# ADDED: output_file
+# ADDED: output_file, return_predictor_epoch_masks
 #def run_cpm_part1(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, input_dir, output_dir, pixel_list=None, train_lim=None):
 
     if pixel_list is not None:
@@ -53,6 +55,7 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
     data_len = pixel_list.shape[0]
 
     out_predictor_matrixes = []
+    out_predictor_epoch_mask = []
 
     for pixel in pixel_list:
         x = pixel[0]-tpf.ref_row
@@ -98,18 +101,22 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                 
             if output_file is not None: 
                 matrix_xy.save_matrix_xy(predictor_matrix, output_file)
-# SAVE predictor_matrix HERE !!!
-                if False:
-                    tpf_set = multipletpf.MultipleTpf()
-                    tpfdata.TpfData.directory = "tpf/"
-                    for tpf in tpfs:
-                        new_tpf = tpfdata.TpfData(epic_id=tpf.kid, campaign=tpf.campaign)
-                        tpf_set.add_tpf_data(new_tpf)
-                    np.savetxt(output_file+"_epoch_mask", tpf_set.predictor_epoch_mask, fmt='%r')
 
             out_predictor_matrixes.append(predictor_matrix)
 
-    return out_predictor_matrixes
+            if return_predictor_epoch_masks:
+                tpf_set = multipletpf.MultipleTpf()
+                tpfdata.TpfData.directory = input_dir
+                for tpf in tpfs:
+                    new_tpf = tpfdata.TpfData(epic_id=tpf.kid, campaign=tpf.campaign)
+                    tpf_set.add_tpf_data(new_tpf)
+                out_predictor_epoch_masks.append(tpf_set.predictor_epoch_mask)
+                # np.savetxt(output_file+"_epoch_mask", tpf_set.predictor_epoch_mask, fmt='%r')
+
+    if return_predictor_epoch_masks:
+        return (out_predictor_matrixes, out_predictor_epoch_masks)
+    else:
+        return out_predictor_matrixes
 
 
 def main():
