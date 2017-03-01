@@ -1,6 +1,7 @@
 import numpy as np
 
-import tpfdata
+#import tpfdata
+from code import tpfdata
 
 
 class MultipleTpf(object):

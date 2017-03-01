@@ -163,7 +163,7 @@ class Tpf():
         dis_mask = distance>dis**2
         distance = distance[dis_mask]
 
-        index = np.argsort(distance)
+        index = np.argsort(distance, kind="mergesort")
 
         pixel_flux = self.pixel_flux[:,pixel_mask][:,dis_mask]
         predictor_flux = pixel_flux[:,index[:num]].astype(float)
