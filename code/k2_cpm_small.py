@@ -23,7 +23,7 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, tim
 
     #remove bad time point based on simulteanous epoch mask
     target_flux = target_flux[epoch_mask]
-    predictor_matrix = predictor_matrix[epoch_mask]
+#    predictor_matrix = predictor_matrix[epoch_mask]
     time = time[epoch_mask]
 
     #add polynomial terms
