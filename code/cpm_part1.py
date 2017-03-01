@@ -99,19 +99,19 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                 pca.fit(predictor_matrix)
                 predictor_matrix = pca.transform(predictor_matrix)
                 
-            if output_file is not None: 
-                matrix_xy.save_matrix_xy(predictor_matrix, output_file)
-
+            tpf_set = multipletpf.MultipleTpf()
+            tpfdata.TpfData.directory = input_dir
+            for tpf in tpfs:
+                new_tpf = tpfdata.TpfData(epic_id=tpf.kid, campaign=tpf.campaign)
+                tpf_set.add_tpf_data(new_tpf)
+            out_predictor_epoch_masks.append(tpf_set.predictor_epoch_mask)
+            # np.savetxt(output_file+"_epoch_mask", tpf_set.predictor_epoch_mask, fmt='%r')
+            
+            predictor_matrix = predictor_matrix[tpf_set.predictor_epoch_mask]
             out_predictor_matrixes.append(predictor_matrix)
 
-            if return_predictor_epoch_masks:
-                tpf_set = multipletpf.MultipleTpf()
-                tpfdata.TpfData.directory = input_dir
-                for tpf in tpfs:
-                    new_tpf = tpfdata.TpfData(epic_id=tpf.kid, campaign=tpf.campaign)
-                    tpf_set.add_tpf_data(new_tpf)
-                out_predictor_epoch_masks.append(tpf_set.predictor_epoch_mask)
-                # np.savetxt(output_file+"_epoch_mask", tpf_set.predictor_epoch_mask, fmt='%r')
+            if output_file is not None: 
+                matrix_xy.save_matrix_xy(predictor_matrix, output_file)
 
     if return_predictor_epoch_masks:
         return (out_predictor_matrixes, out_predictor_epoch_masks)

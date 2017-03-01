@@ -4,7 +4,7 @@ import numpy as np
 from code import leastSquareSolver as lss
 
 
-def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predictor_epoch_mask, l2, time, poly=0, ml=None):
+def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, time, poly=0, ml=None):
     """
     ## inputs:
     - `predictor_matrix` - matrix of predictor fluxes
@@ -19,7 +19,7 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predict
     - `l2_vector` - vector of the l2 regularization 
     """
 
-    epoch_mask = target_epoch_mask * predictor_epoch_mask
+    epoch_mask = target_epoch_mask
 
     #remove bad time point based on simulteanous epoch mask
     target_flux = target_flux[epoch_mask]
