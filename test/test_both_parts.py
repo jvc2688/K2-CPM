@@ -33,14 +33,15 @@ def do_test_cpm_part1_and_part2(n_test_compare,
     assert pixel_list.shape[0] == 1, 'this version accepts only single pixel in pixel_list'
     assert pixel_list.shape[1] == 2, 'exactly 2 coordinates of pixel required'
     tpf_flux = tpf.get_flux_for_pixel(row=pixel_list[0][0], column=pixel_list[0][1])
+    tpf_flux_err = tpf.get_flux_err_for_pixel(row=pixel_list[0][0], column=pixel_list[0][1])
     mask = predictor_epoch_masks[0]
 
     # run cpm_part2
-    (result, fit_flux, dif) = cpm_part2.cpm_part2(tpf_flux[mask], 
+    (result, fit_flux, dif) = cpm_part2.cpm_part2(tpf.jd_short[mask], 
+                                    tpf_flux[mask], tpf_flux_err[mask], 
                                     tpf_epoch_mask=tpf.epoch_mask[mask], 
                                     predictor_matrix=predictor_matrix_list[0], 
-                                    l2=l2,
-                                    tpf_time=tpf.jd_short[mask])
+                                    l2=l2)
             
     np.testing.assert_almost_equal(result[:,0], expect_result)
     np.testing.assert_almost_equal(dif, expect_dif, decimal=5)
