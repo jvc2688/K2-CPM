@@ -26,6 +26,8 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, tim
 #    predictor_matrix = predictor_matrix[epoch_mask]
     time = time[epoch_mask]
 
+    l2_length_of_ones = predictor_matrix.shape[0]
+
     #add polynomial terms
     if poly is not None:
         nor_time = np.arange(predictor_matrix.shape[0]) # Note that this assumes exactly equal time differences and no missing data.
@@ -37,6 +39,8 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, tim
 
     #construct l2 vectors
     l2_vector = np.ones(predictor_matrix.shape[1], dtype=float) * l2
+
+    l2_vector[l2_length_of_ones:] = 0. # This ensures that there's no reguralization on concatenated models and polynomials. 
 
     return target_flux, predictor_matrix, None, l2_vector, time, epoch_mask
 
