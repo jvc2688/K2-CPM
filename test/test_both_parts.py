@@ -39,9 +39,8 @@ def do_test_cpm_part1_and_part2(n_test_compare,
     (result, fit_flux, dif) = cpm_part2.cpm_part2(tpf_flux[mask], 
                                     tpf_epoch_mask=tpf.epoch_mask[mask], 
                                     predictor_matrix=predictor_matrix_list[0], 
-                                    l2=l2, 
-                                    tpf_time=tpf.jd_short[mask], 
-                                    pixel_mask=tpf.epoch_mask)
+                                    l2=l2,
+                                    tpf_time=tpf.jd_short[mask])
             
     np.testing.assert_almost_equal(result[:,0], expect_result)
     np.testing.assert_almost_equal(dif, expect_dif, decimal=5)

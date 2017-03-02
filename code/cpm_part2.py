@@ -17,7 +17,7 @@ def read_true_false_file(file_name):
             out.append(parser[line[:-1].upper()])
     return np.array(out)
 
-def cpm_part2(tpf_flux, tpf_epoch_mask, predictor_matrix, l2, tpf_time, pixel_mask):
+def cpm_part2(tpf_flux, tpf_epoch_mask, predictor_matrix, l2, tpf_time):
     """get predictor_matrix, run CPM, calculate dot product and difference of target_flux and fit_flux"""
     # run get_fit_matrix_ffi()
     fit_matrix_results = k2_cpm_small.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, predictor_matrix, l2, tpf_time, 0, None)
@@ -26,7 +26,7 @@ def cpm_part2(tpf_flux, tpf_epoch_mask, predictor_matrix, l2, tpf_time, pixel_ma
     (target_flux, predictor_matrix, none_none, l2_vector, time) = fit_matrix_results
     
     # run CPM:
-    result = k2_cpm_small.fit_target(target_flux, pixel_mask, np.copy(predictor_matrix), time, None, l2_vector, None)
+    result = k2_cpm_small.fit_target(target_flux, np.copy(predictor_matrix), time, None, l2_vector, None)
     
     # final calculations:
     fit_flux = np.dot(predictor_matrix, result)
@@ -46,7 +46,6 @@ def execute_cpm_part2(n_test=1):
     pre_matrix_file = "{:}{:}-pre_matrix_xy.dat".format(in_directory_2, n_test)
     predictor_epoch_mask_file = "{:}{:}-predictor_epoch_mask.dat".format(in_directory, n_test)
     pixel_flux_file_name = '{:}{:}-pixel_flux.dat'.format(in_directory, n_test)
-    pixel_mask_file_name = '{:}{:}-mask.dat'.format(in_directory, n_test)
     epoch_mask_file_name = '{:}{:}-epoch_mask.dat'.format(in_directory, n_test)
 
     # output files:
@@ -58,13 +57,11 @@ def execute_cpm_part2(n_test=1):
     pre_matrix = matrix_xy.load_matrix_xy(pre_matrix_file)
     predictor_epoch_mask = read_true_false_file(predictor_epoch_mask_file)
     (tpf_time, tpf_flux) = np.loadtxt(pixel_flux_file_name, unpack=True)
-    pixel_mask = matrix_xy.load_matrix_xy(pixel_mask_file_name, data_type='boolean')
     tpf_epoch_mask = read_true_false_file(epoch_mask_file_name)
 
     # Calculations:
     (result, fit_flux, dif) = cpm_part2(tpf_flux, tpf_epoch_mask, pre_matrix, 
-                                                l2, 
-                                                tpf_time, pixel_mask)
+                                                l2, tpf_time)
 
     # Save results:
     np.savetxt(result_file_name, result, fmt='%.8f')

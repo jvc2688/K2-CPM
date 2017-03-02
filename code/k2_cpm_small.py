@@ -44,12 +44,9 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, tim
 
     return target_flux, predictor_matrix, None, l2_vector, time
 
-def fit_target(target_flux, target_kplr_mask, predictor_flux_matrix, time, covar_list, l2_vector=None, train_lim=None):
+def fit_target(target_flux, predictor_flux_matrix, time, covar_list, l2_vector=None, train_lim=None):
     """
-    TO DO - remove target_kplr_mask because not used !!!
-
     ## inputs:
-    - `target_kplr_mask` - kepler mask of the target star
     - `predictor_flux_matrix` - fitting matrix of neighbor flux
     - `l2_vector` - array of L2 regularization strength
     ## outputs:
