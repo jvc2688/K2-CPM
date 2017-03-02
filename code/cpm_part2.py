@@ -56,7 +56,8 @@ def execute_cpm_part2(n_test=1):
     # Load all required files:
     pre_matrix = matrix_xy.load_matrix_xy(pre_matrix_file)
     predictor_epoch_mask = read_true_false_file(predictor_epoch_mask_file)
-    (tpf_time, tpf_flux) = np.loadtxt(pixel_flux_file_name, unpack=True)
+    tpf_data = np.loadtxt(pixel_flux_file_name, unpack=True)
+    (tpf_time, tpf_flux, tpf_flux_err) = tpf_data
     tpf_epoch_mask = read_true_false_file(epoch_mask_file_name)
 
     # Calculations:
