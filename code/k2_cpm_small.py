@@ -44,7 +44,7 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, tim
 
     return target_flux, predictor_matrix, None, l2_vector, time, epoch_mask
 
-def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask, covar_list, l2_vector=None, thread_num=1, train_lim=None):
+def fit_target(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask, covar_list, l2_vector=None, thread_num=1, train_lim=None):
     """
     TO DO - remove thread_num option because not used
     TO DO - remove epoch_mask because not used !!!
