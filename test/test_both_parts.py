@@ -16,6 +16,8 @@ def do_test_cpm_part1_and_part2(n_test_compare,
 
     file_expect_result = 'output/expected/{:}-result.dat'.format(n_test_compare)
     expect_result = np.loadtxt(file_expect_result)
+    file_expect_dif = 'output/expected/{:}-dif.dat'.format(n_test_compare)
+    expect_dif = np.loadtxt(file_expect_dif)
 
     # run cpm_part1
     (predictor_matrix_list, predictor_epoch_masks) = cpm_part1.run_cpm_part1(
@@ -42,6 +44,7 @@ def do_test_cpm_part1_and_part2(n_test_compare,
                                     pixel_mask=tpf.epoch_mask)
             
     np.testing.assert_almost_equal(result[:,0], expect_result)
+    np.testing.assert_almost_equal(dif, expect_dif, decimal=5)
     
 def test_cpm_both_parts():
     """same settings as in Dun's test #1"""

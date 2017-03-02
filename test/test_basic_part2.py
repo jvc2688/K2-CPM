@@ -18,7 +18,7 @@ def single_test(n_test):
     expect_dif = np.loadtxt(file_expect_dif)
 
     np.testing.assert_almost_equal(out_result, expect_result)
-    #np.testing.assert_almost_equal(out_dif, expect_dif, decimal=3)
+    np.testing.assert_almost_equal(out_dif, expect_dif, decimal=5)
 
 def test_1():
     single_test(1)
