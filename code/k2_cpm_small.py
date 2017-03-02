@@ -42,11 +42,10 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, tim
 
     l2_vector[l2_length_of_ones:] = 0. # This ensures that there's no reguralization on concatenated models and polynomials. 
 
-    return target_flux, predictor_matrix, None, l2_vector, time, epoch_mask
+    return target_flux, predictor_matrix, None, l2_vector, time
 
-def fit_target(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask, covar_list, l2_vector=None, train_lim=None):
+def fit_target(target_flux, target_kplr_mask, predictor_flux_matrix, time, covar_list, l2_vector=None, train_lim=None):
     """
-    TO DO - remove epoch_mask because not used !!!
     TO DO - remove target_kplr_mask because not used !!!
 
     ## inputs:

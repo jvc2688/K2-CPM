@@ -23,10 +23,10 @@ def cpm_part2(tpf_flux, tpf_epoch_mask, predictor_matrix, l2, tpf_time, pixel_ma
     fit_matrix_results = k2_cpm_small.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, predictor_matrix, l2, tpf_time, 0, None)
 
     # decompose results of get_fit_matrix_ffi()
-    (target_flux, predictor_matrix, none_none, l2_vector, time, target_epoch_mask) = fit_matrix_results
+    (target_flux, predictor_matrix, none_none, l2_vector, time) = fit_matrix_results
     
     # run CPM:
-    result = k2_cpm_small.fit_target(target_flux, pixel_mask, np.copy(predictor_matrix), time, target_epoch_mask, None, l2_vector, None)
+    result = k2_cpm_small.fit_target(target_flux, pixel_mask, np.copy(predictor_matrix), time, None, l2_vector, None)
     
     # final calculations:
     fit_flux = np.dot(predictor_matrix, result)
