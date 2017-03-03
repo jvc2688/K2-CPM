@@ -37,7 +37,7 @@ def do_test_cpm_part1_and_part2(n_test_compare,
     mask = predictor_epoch_masks[0]
 
     # run cpm_part2
-    (result, fit_flux, dif) = cpm_part2.cpm_part2(tpf.jd_short[mask], 
+    (result, fit_flux, dif, time) = cpm_part2.cpm_part2(tpf.jd_short[mask], 
                                     tpf_flux[mask], tpf_flux_err[mask], 
                                     tpf_epoch_mask=tpf.epoch_mask[mask], 
                                     predictor_matrix=predictor_matrix_list[0], 

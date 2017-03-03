@@ -32,7 +32,7 @@ def cpm_part2(tpf_time, tpf_flux, tpf_flux_err, tpf_epoch_mask, predictor_matrix
     # final calculations:
     fit_flux = np.dot(predictor_matrix, result)
     dif = target_flux - fit_flux[:,0]
-    return (result, fit_flux, dif)
+    return (result, fit_flux, dif, time)
 
 
 def execute_cpm_part2(n_test=1):
@@ -62,7 +62,7 @@ def execute_cpm_part2(n_test=1):
     tpf_epoch_mask = read_true_false_file(epoch_mask_file_name)
 
     # Calculations:
-    (result, fit_flux, dif) = cpm_part2(tpf_time, tpf_flux, tpf_flux_err,
+    (result, fit_flux, dif, time) = cpm_part2(tpf_time, tpf_flux, tpf_flux_err,
                                             tpf_epoch_mask, pre_matrix, l2) 
 
     # Save results:
