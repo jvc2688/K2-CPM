@@ -26,6 +26,8 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, tim
 #    predictor_matrix = predictor_matrix[epoch_mask]
     time = time[epoch_mask]
 
+    l2_length_of_ones = predictor_matrix.shape[0]
+
     #add polynomial terms
     if poly is not None:
         nor_time = np.arange(predictor_matrix.shape[0]) # Note that this assumes exactly equal time differences and no missing data.
@@ -38,21 +40,20 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, tim
     #construct l2 vectors
     l2_vector = np.ones(predictor_matrix.shape[1], dtype=float) * l2
 
-    return target_flux, predictor_matrix, None, l2_vector, time, epoch_mask
+    l2_vector[l2_length_of_ones:] = 0. # This ensures that there's no reguralization on concatenated models and polynomials. 
 
-def fit_target_no_train(target_flux, target_kplr_mask, predictor_flux_matrix, time, epoch_mask, covar_list, l2_vector=None, thread_num=1, train_lim=None):
+    return target_flux, predictor_matrix, None, l2_vector, time
+
+def fit_target(target_flux, predictor_flux_matrix, time=None, covar_list=None, l2_vector=None, train_lim=None):
     """
-    TO DO - remove thread_num option because not used
-    TO DO - remove epoch_mask because not used !!!
-    TO DO - remove target_kplr_mask because not used !!!
-
     ## inputs:
-    - `target_kplr_mask` - kepler mask of the target star
     - `predictor_flux_matrix` - fitting matrix of neighbor flux
     - `l2_vector` - array of L2 regularization strength
     ## outputs:
     """
     if train_lim is not None:
+        if time is None:
+            raise ValueError('fit_target() parameter time has to be provided when train_lim parameter is provided')
         train_mask = (time<train_lim[0]) | (time>train_lim[1])
         predictor_flux_matrix = predictor_flux_matrix[train_mask,:]
         target_flux = target_flux[train_mask]

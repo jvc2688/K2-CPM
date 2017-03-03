@@ -52,17 +52,23 @@ class TpfData(object):
         pixel_mask = np.isfinite(flux) & (flux != 0)
         pixel_mask[:, self.pixel_mask < 1] = False
         self.pixel_mask = pixel_mask 
+        
         quality_flags = data["quality"]
-        # TO BE DONE - can someone check if these are the only flags we should remove? Should we change it to a parameter? 
+        # TO_BE_DONE - can someone check if these are the only flags we should remove? Should we change it to a parameter? 
         quality_flags_ok = ((quality_flags == 0) | (quality_flags == 8192) | (quality_flags == 16384) | (quality_flags == 24576)) 
         foo = np.sum(np.sum((self.pixel_mask > 0), axis=2), axis=1) # Does anybody understand what is happening here?
         self.epoch_mask = (foo > 0) & np.isfinite(self.jd_short) & quality_flags_ok
         flux = flux[:, self.mask>0]
         if not np.isfinite(flux).all():
             raise ValueError('non-finite value in flux table of {:} - feature not done yet'.format(file_name))
-            # TO BE DONE - code interpolation using e.g. k2_cpm.py lines: 89-92
+            # TO_BE_DONE - code interpolation using e.g. k2_cpm.py lines: 89-92
+            # TO_BE_DONE - also checks on flux_err?
         self.flux = flux
         self.median = np.median(flux, axis=0)
+
+        flux_err = data["flux_err"]
+        flux_err = flux_err[:, self.mask>0]
+        self.flux_err = flux_err
 
         hdu_list.close()
 
@@ -109,6 +115,11 @@ class TpfData(object):
         """extracts flux for a single pixel (all epochs) specified as row and column"""
         index = self._get_pixel_index(row, column)
         return self.flux[:,index]
+
+    def get_flux_err_for_pixel(self, row, column):
+        """extracts flux_err for a single pixel (all epochs) specified as row and column"""
+        index = self._get_pixel_index(row, column)
+        return self.flux_err[:,index]
     
     def save_pixel_curve(self, row, column, file_name, full_time=True):
         """saves the time vector and the flux for a single pixel into a file"""
@@ -117,6 +128,19 @@ class TpfData(object):
         if full_time:
             time += 2450000.
         np.savetxt(file_name, np.array([time, flux]).T, fmt="%.5f %.8f")
+
+    def save_pixel_curve_with_err(self, row, column, file_name, 
+                                                        full_time=True):
+        """saves: 
+        the time vector, flux vector, and flux_err vector 
+        for a single pixel into a file"""
+        flux = self.get_flux_for_pixel(row=row, column=column)
+        flux_err = self.get_flux_err_for_pixel(row=row, column=column)
+        time = self.jd_short
+        if full_time:
+            time += 2450000.
+        np.savetxt(file_name, np.array([time, flux, flux_err]).T, 
+                                                fmt="%.5f %.8f %.8f")
 
 
 if __name__ == '__main__':
@@ -130,7 +154,7 @@ if __name__ == '__main__':
     
     TpfData.directory = directory
     tpf = TpfData(epic_id=epic_id, campaign=campaign)
-    tpf.save_pixel_curve(pixel[0], pixel[1], file_name=out_file_a)
+    tpf.save_pixel_curve_with_err(pixel[0], pixel[1], file_name=out_file_a)
 
     matrix_xy.save_matrix_xy(tpf.mask, out_file_b, data_type='boolean') # CHANGE THIS INTO TpfData.save_mask().
     

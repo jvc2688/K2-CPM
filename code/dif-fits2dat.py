@@ -16,5 +16,6 @@ for d in data:
 
 for i in range(len(out_t)):
     print("{:.5f} {:.5f}".format(out_t[i], out_dif[i]))
+    #print("{:.8f}".format(out_dif[i]))
 
 
