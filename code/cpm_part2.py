@@ -27,7 +27,7 @@ def cpm_part2(tpf_time, tpf_flux, tpf_flux_err, tpf_epoch_mask, predictor_matrix
     (target_flux, predictor_matrix, none_none, l2_vector, time) = fit_matrix_results
     
     # run CPM:
-    result = k2_cpm_small.fit_target(target_flux, np.copy(predictor_matrix), time, None, l2_vector, None)
+    result = k2_cpm_small.fit_target(target_flux, np.copy(predictor_matrix), l2_vector=l2_vector)
     
     # final calculations:
     fit_flux = np.dot(predictor_matrix, result)

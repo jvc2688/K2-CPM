@@ -44,7 +44,7 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, tim
 
     return target_flux, predictor_matrix, None, l2_vector, time
 
-def fit_target(target_flux, predictor_flux_matrix, time, covar_list, l2_vector=None, train_lim=None):
+def fit_target(target_flux, predictor_flux_matrix, time=None, covar_list=None, l2_vector=None, train_lim=None):
     """
     ## inputs:
     - `predictor_flux_matrix` - fitting matrix of neighbor flux
@@ -52,6 +52,8 @@ def fit_target(target_flux, predictor_flux_matrix, time, covar_list, l2_vector=N
     ## outputs:
     """
     if train_lim is not None:
+        if time is None:
+            raise ValueError('fit_target() parameter time has to be provided when train_lim parameter is provided')
         train_mask = (time<train_lim[0]) | (time>train_lim[1])
         predictor_flux_matrix = predictor_flux_matrix[train_mask,:]
         target_flux = target_flux[train_mask]
