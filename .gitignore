@@ -3,8 +3,14 @@ plots/
 hdf5/
 movie/
 code/others/
+test/tpf/
+.idea/
 *.ipynb
 *.dat
 *.png
 *.pyc
 *.py~
+*.o
+*.so
+*.DS_Store
+code/libcpm
