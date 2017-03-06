@@ -4,6 +4,7 @@ hdf5/
 movie/
 code/others/
 test/tpf/
+test_persos/
 .idea/
 *.ipynb
 *.dat
