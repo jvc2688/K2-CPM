@@ -250,9 +250,9 @@ void cpm_part2(int n_test=1){
 //    pixel[1] = 670;
 
     // Input files
-    string in_directory ("../test_persos/intermediate/");
+    string in_directory ("../test/intermediate/");
     // string in_directory2 ("../test/intermediate/expected/");
-    string out_directory ("../test_persos/output/");
+    string out_directory ("../test/output/");
     string pre_matrix_file ("-pre_matrix_xy.dat");
     pre_matrix_file = in_directory + to_string(n_test) + pre_matrix_file;
     string pixel_flux_file_name ("-pixel_flux.dat");
