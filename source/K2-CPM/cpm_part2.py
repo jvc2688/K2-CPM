@@ -4,8 +4,8 @@ import numpy as np
 #import k2_cpm
 #import matrix_xy
 #from code import k2_cpm
-from code import k2_cpm_small
-from code import matrix_xy
+from K2CPM import k2_cpm_small
+from K2CPM import matrix_xy
 
 
 def read_true_false_file(file_name):

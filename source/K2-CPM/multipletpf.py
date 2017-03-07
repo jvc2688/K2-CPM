@@ -1,7 +1,7 @@
 import numpy as np
 
 #import tpfdata
-from code import tpfdata
+from K2CPM import tpfdata
 
 
 class MultipleTpf(object):

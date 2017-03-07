@@ -1,7 +1,7 @@
 import numpy as np
 
 #import leastSquareSolver as lss
-from code import leastSquareSolver as lss
+from K2CPM import leastSquareSolver as lss
 
 
 def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, time, poly=0, ml=None):

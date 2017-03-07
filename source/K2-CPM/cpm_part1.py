@@ -5,11 +5,11 @@ import numpy as np
 from sklearn.decomposition import PCA
 import argparse
 
-from code import k2_cpm as k2cpm
-from code import epic
-from code import matrix_xy
-from code import multipletpf
-from code import tpfdata
+from K2CPM import k2_cpm as k2cpm
+from K2CPM import epic
+from K2CPM import matrix_xy
+from K2CPM import multipletpf
+from K2CPM import tpfdata
 
 
 def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl, 
