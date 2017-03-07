@@ -188,7 +188,7 @@ void fit_target(Table& target_flux, Table& predictor_flux_matrix,
 }
 //==================================================================//
 void get_fit_matrix_ffi(Table& target_flux, Table& predictor_matrix,
-    Table& time, int poly, double ml, Table& predictor_matrix_mp){
+    Table& time, int poly, Table& ml, Table& predictor_matrix_mp){
 /*
     Prepare matrix to fit the fluxes.
 
@@ -220,9 +220,10 @@ void get_fit_matrix_ffi(Table& target_flux, Table& predictor_matrix,
     // Concatenate with the Vandermonde matrix
     assert(poly >= 0);
     for(i=0; i<n_dates; ++i) {
-        for(j=0; j<n_pred+poly+1; ++j){
+        for(j=0; j<n_pred+poly+1+1; ++j){
             if (j<n_pred) predictor_matrix_mp.set(i, j) = predictor_matrix(i, j);
-            else predictor_matrix_mp.set(i, j) = pow(i, j-n_pred);
+            if ((j>=n_pred) && (j<n_pred+poly+1)) predictor_matrix_mp.set(i, j) = pow(i, j-n_pred);
+            if (j==n_pred+poly+1) predictor_matrix_mp.set(i, j) = ml(i);
         }
     }
 
@@ -234,7 +235,7 @@ void cpm_part2(int n_test=1){
     // Declaration and initialisations
     int i, i2, j, poly=0, lsize;
     int n_dates, n_pred, n_dates_wmask, n_pred_poly, * epoch_mask;
-    double l2 = 1000, x, ml=0;
+    double l2 = 0.0, x, ml=0;
     double train_lim[2];
     int * pixel;
     string line, last_line, lastline, delimiter;
@@ -243,19 +244,25 @@ void cpm_part2(int n_test=1){
     train_lim[1] = -1;
 
     pixel = new int [2];
+//    pixel[0] = 883;
+//    pixel[1] = 670;
     pixel[0] = 883;
     pixel[1] = 670;
 
     // Input files
-    string in_directory ("../test/intermediate/");
-    string in_directory2 ("../test/intermediate/expected/");
-    string out_directory ("../test/output/");
+    string in_directory ("../test_persos/intermediate/");
+    // string in_directory2 ("../test/intermediate/expected/");
+    string out_directory ("../test_persos/output/");
     string pre_matrix_file ("-pre_matrix_xy.dat");
-    pre_matrix_file = in_directory2 + to_string(n_test) + pre_matrix_file;
+    pre_matrix_file = in_directory + to_string(n_test) + pre_matrix_file;
     string pixel_flux_file_name ("-pixel_flux.dat");
     pixel_flux_file_name = in_directory + to_string(n_test) + pixel_flux_file_name;
     string epoch_mask_file_name ("-epoch_mask.dat");
     epoch_mask_file_name = in_directory + to_string(n_test) + epoch_mask_file_name;
+    string fname_ml ("-time_magnification.dat");
+    fname_ml = in_directory + to_string(n_test) + fname_ml;
+    string fname_mask ("-mask.dat");
+    fname_mask = in_directory + to_string(n_test) + fname_mask;
 
     // Output files
     string result_file_name ("-result.dat");
@@ -357,13 +364,53 @@ void cpm_part2(int n_test=1){
     }
     else cout << "Unable to open file";
 
+    // Load microlensing model
+    int n_ml=0;
+    ifstream f1_mask (fname_mask);
+    if (f1_mask.is_open()){
+        while(f1_mask >> x) ++n_ml;
+    }
+    else cout << "Unable to open file";
+    f1_mask.close();
+
+    Table ml_mask(n_ml);
+    ifstream f2_mask (fname_mask);
+    if (f2_mask.is_open()){
+        for (i=0; i<n_ml; ++i){
+            f2_mask >> i2;
+            if(i2) {
+                ml_mask.set(i) = 1;
+            }
+            else ml_mask.set(i) = 0;
+        }
+    }
+    else cout << "Unable to open file";
+    f2_mask.close();
+
+    Table ml2(n_dates);
+    ifstream f1_ml (fname_ml);
+    if (f1_ml.is_open()){
+        i2 = 0;
+        for (i=0; i<n_ml; ++i){
+            f1_ml >> x >> x;
+            if(ml_mask(i)) {
+                ml2.set(i2) = x;
+                i2++;
+            }
+        }
+    }
+    else cout << "Unable to open file";
+    f1_ml.close();
+
     // Calculations
     // ------------
-    n_pred_poly = n_pred + poly + 1;
+    n_pred_poly = n_pred + poly + 1 + 1;  // +1 for poly +1 for ml
 
     // Prepare flux matrix to fit
     Table predictor_matrix_mp(n_dates_wmask, n_pred_poly);
-    get_fit_matrix_ffi(tpf_flux, pre_matrix, tpf_time, poly, ml, predictor_matrix_mp);
+    get_fit_matrix_ffi(tpf_flux, pre_matrix, tpf_time, poly, ml2, predictor_matrix_mp);
+
+    cout << predictor_matrix_mp(n_dates_wmask-1, n_pred_poly-1) << endl;
 
     // Prepare regularization
     Table l2_vector(n_pred_poly);
