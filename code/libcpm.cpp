@@ -235,19 +235,19 @@ void cpm_part2(int n_test=1){
     // Declaration and initialisations
     int i, i2, j, poly=0, lsize;
     int n_dates, n_pred, n_dates_wmask, n_pred_poly, * epoch_mask;
-    double l2 = 0.0, x, ml=0;
+    double l2 = 0.0, x;
     double train_lim[2];
-    int * pixel;
+//    int * pixel;
     string line, last_line, lastline, delimiter;
 
     train_lim[0] = -1;
     train_lim[1] = -1;
 
-    pixel = new int [2];
+//    pixel = new int [2];
 //    pixel[0] = 883;
 //    pixel[1] = 670;
-    pixel[0] = 883;
-    pixel[1] = 670;
+//    pixel[0] = 883;
+//    pixel[1] = 670;
 
     // Input files
     string in_directory ("../test_persos/intermediate/");
@@ -387,14 +387,14 @@ void cpm_part2(int n_test=1){
     else cout << "Unable to open file";
     f2_mask.close();
 
-    Table ml2(n_dates);
+    Table ml(n_dates);
     ifstream f1_ml (fname_ml);
     if (f1_ml.is_open()){
         i2 = 0;
         for (i=0; i<n_ml; ++i){
             f1_ml >> x >> x;
             if(ml_mask(i)) {
-                ml2.set(i2) = x;
+                ml.set(i2) = x;
                 i2++;
             }
         }
@@ -408,7 +408,7 @@ void cpm_part2(int n_test=1){
 
     // Prepare flux matrix to fit
     Table predictor_matrix_mp(n_dates_wmask, n_pred_poly);
-    get_fit_matrix_ffi(tpf_flux, pre_matrix, tpf_time, poly, ml2, predictor_matrix_mp);
+    get_fit_matrix_ffi(tpf_flux, pre_matrix, tpf_time, poly, ml, predictor_matrix_mp);
 
     cout << predictor_matrix_mp(n_dates_wmask-1, n_pred_poly-1) << endl;
 
@@ -457,7 +457,7 @@ void cpm_part2(int n_test=1){
 
     // Release memory
     // --------------
-    delete[] pixel;
+//    delete[] pixel;
     delete[] epoch_mask;
 }
 //==================================================================//
