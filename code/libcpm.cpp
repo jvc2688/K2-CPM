@@ -410,8 +410,6 @@ void cpm_part2(int n_test=1){
     Table predictor_matrix_mp(n_dates_wmask, n_pred_poly);
     get_fit_matrix_ffi(tpf_flux, pre_matrix, tpf_time, poly, ml, predictor_matrix_mp);
 
-    cout << predictor_matrix_mp(n_dates_wmask-1, n_pred_poly-1) << endl;
-
     // Prepare regularization
     Table l2_vector(n_pred_poly);
     l2_vector = l2;
@@ -421,7 +419,7 @@ void cpm_part2(int n_test=1){
 
     // Prepare uncertainties
     Table covar_list(n_dates_wmask);
-    covar_list = 1.0;
+    covar_list = tpf_flux_err;
 
     // Fit target
     Table result(n_pred_poly);
