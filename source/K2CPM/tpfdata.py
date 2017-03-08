@@ -7,7 +7,7 @@ from sklearn.decomposition import PCA
 from astropy.io import fits as pyfits
 
 #import matrix_xy
-from code import matrix_xy
+from K2CPM import matrix_xy
 
 
 class TpfData(object):

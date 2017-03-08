@@ -1,7 +1,7 @@
 import numpy as np
 
-from code import cpm_part1
-from code import matrix_xy
+from K2CPM import cpm_part1
+from K2CPM import matrix_xy
 
 
 def do_test_cpm_part1(n_test, target_epic_num=200071074, campaign=92, 

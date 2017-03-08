@@ -1,9 +1,9 @@
 import numpy as np
 
-from code import cpm_part1
-from code import cpm_part2
-from code import matrix_xy
-from code import tpfdata
+from K2CPM import cpm_part1
+from K2CPM import cpm_part2
+from K2CPM import matrix_xy
+from K2CPM import tpfdata
 
 
 def do_test_cpm_part1_and_part2(n_test_compare, 
@@ -34,7 +34,7 @@ def do_test_cpm_part1_and_part2(n_test_compare,
     assert pixel_list.shape[1] == 2, 'exactly 2 coordinates of pixel required'
     tpf_flux = tpf.get_flux_for_pixel(row=pixel_list[0][0], column=pixel_list[0][1])
     tpf_flux_err = tpf.get_flux_err_for_pixel(row=pixel_list[0][0], column=pixel_list[0][1])
-    mask = predictor_epoch_masks[0]
+    mask = tpf.epoch_mask
 
     # run cpm_part2
     (result, fit_flux, dif, time) = cpm_part2.cpm_part2(tpf.jd_short[mask], 
