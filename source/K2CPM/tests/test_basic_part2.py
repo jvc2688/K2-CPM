@@ -1,7 +1,7 @@
 import numpy as np
 
-from code.tpfdata import TpfData
-from code import cpm_part2
+from K2CPM.tpfdata import TpfData
+from K2CPM import cpm_part2
 
 
 def single_test(n_test):

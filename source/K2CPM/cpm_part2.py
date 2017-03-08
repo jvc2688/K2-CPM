@@ -4,8 +4,8 @@ import numpy as np
 #import k2_cpm
 #import matrix_xy
 #from code import k2_cpm
-from code import k2_cpm_small
-from code import matrix_xy
+from K2CPM import k2_cpm_small
+from K2CPM import matrix_xy
 
 
 def read_true_false_file(file_name):
@@ -40,9 +40,9 @@ def execute_cpm_part2(n_test=1):
     l2 = 1000.
     campaign = 92 
     pixel = [883, 670]
-    in_directory = "../test/intermediate/"
-    in_directory_2 = "../test/intermediate/expected/"
-    out_directory = "../test/output/"
+    in_directory = "../tests/intermediate/"
+    in_directory_2 = "../tests/intermediate/expected/"
+    out_directory = "../tests/output/"
     
     pre_matrix_file = "{:}{:}-pre_matrix_xy.dat".format(in_directory_2, n_test)
     predictor_epoch_mask_file = "{:}{:}-predictor_epoch_mask.dat".format(in_directory, n_test)

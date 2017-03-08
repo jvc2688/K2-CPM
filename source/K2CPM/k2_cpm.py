@@ -5,7 +5,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 #import leastSquareSolver as lss
-from code import leastSquareSolver as lss
+from K2CPM import leastSquareSolver as lss
 import threading
 import os
 import math
