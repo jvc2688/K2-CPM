@@ -22,6 +22,7 @@ class Table {
     public:
     explicit Table(int d1, int d2=1, int d3=1);
     Table(const Table&);
+    explicit Table(const char*);
 
     // Destructor
     virtual ~Table();
@@ -52,6 +53,8 @@ class Table {
     };
 
     // Useful functions
+    void save(const char* fname) const;
+
     protected:
     virtual void print(ostream&) const;  // Print the table
 

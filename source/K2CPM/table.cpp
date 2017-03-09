@@ -23,6 +23,19 @@ Table::Table(const Table& table_in) : size1(table_in.size1),
     for (int i=0; i<size; i++) tab[i] = table_in.tab[i];
 }
 //==================================================================//
+Table::Table(const char* fname) {
+    ifstream file(fname);
+    assert(file);
+    file >> size1 >> size2 >> size3;
+    assert((size1>0)&&(size2>0)&&(size3>0));
+    int size = size1*size2*size3;
+    tab = new double[size];
+    for (int i=0; i<size; ++i) {
+        assert(file);
+        file >> tab[i];
+    }
+}
+//==================================================================//
 Table::~Table() {
   if (tab != 0x0) delete[] tab ;
 }
@@ -214,4 +227,16 @@ Table pow(const Table& table_in, double x) {
   Table result(s1, s2, s3);
   for (int i=0; i<size; i++) result.tab[i] = pow(table_in.tab[i], x);
   return result;
+}
+//==================================================================//
+void Table::save(const char* fname) const {
+    assert(tab != 0x0);
+
+    ofstream file(fname);
+    int size = size1*size2*size3;
+    file << size1 << ' ' << size2 << ' ' << size3 << endl;
+    file << setprecision(16) ;
+    for (int i=0; i<size; i++)
+        file << tab[i] << ' ';
+    file << endl ;
 }

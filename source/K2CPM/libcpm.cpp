@@ -467,6 +467,7 @@ int main(int argc, char* argv[]) {
 
     // Take into account command-line arguments
     // ----------------------------------------
+
     if(argc==2) i = stoi(argv[1]);
 
     // Run the independent part of CPM
@@ -475,3 +476,5 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+
+// ./libcpm inputdir stem
