@@ -27,12 +27,65 @@ Table::Table(const char* fname) {
     ifstream file(fname);
     assert(file);
     file >> size1 >> size2 >> size3;
-    assert((size1>0)&&(size2>0)&&(size3>0));
-    int size = size1*size2*size3;
+    assert((size1>0) && (size2>0) && (size3>0));
+    int size = size1 * size2 * size3;
     tab = new double[size];
     for (int i=0; i<size; ++i) {
         assert(file);
         file >> tab[i];
+    }
+}
+//==================================================================//
+Table::Table(const char* fname, const char* fname_mask, const int axis) {
+    int i, i2, itab, size, n_ref, size_old, size2_old, size3_old;
+    double x;
+    Table mask(fname_mask);
+    assert((mask.get_size2()==1) && (mask.get_size3()==1));
+    n_ref = 0;
+    for (i=0; i<mask.get_size1(); ++i) {
+        if (mask(i) < 0.5) ++n_ref;
+    }
+
+    ifstream file(fname);
+    assert(file);
+    file >> size1 >> size2 >> size3;
+    size2_old = size2;
+    size3_old = size3;
+    size_old = size1 * size2 * size3;
+    switch(axis) {
+        case 0 :
+            size1 -= n_ref;
+            break;
+        case 1 :
+            size2 -= n_ref;
+            break;
+        case 3 :
+            size3 -= n_ref;
+            break;
+    }
+    assert((size1>0) && (size2>0) && (size3>0));
+    size = size1 * size2 * size3;
+    tab = new double[size];
+    i2 = 0;
+    for (i=0; i<size_old; ++i) {
+        assert(file);
+
+        switch(axis) {
+            case 0 :
+                itab = i / (size2_old * size3_old);  // value of first index
+                break;
+            case 1 :
+                itab = (i % (size2_old * size3_old)) / size3_old;  // value of second index
+                break;
+            case 3 :
+                itab = (i % (size2_old * size3_old)) % size3_old;  // value of third index
+                break;
+        }
+        if (mask(itab) < 0.5) file >> x;
+        else{
+            file >> tab[i2];
+            ++i2;
+        }
     }
 }
 //==================================================================//
@@ -81,7 +134,7 @@ void Table::print(ostream& ost) const {
     if (size3>1) ost << size3;
     ost << " elements" << endl;
 
-    ost << setprecision(3);
+    ost << setprecision(12);
 
     if (size3 == 1) {
         for (int i=0; i<size1; i++) {

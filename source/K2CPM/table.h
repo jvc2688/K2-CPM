@@ -23,6 +23,7 @@ class Table {
     explicit Table(int d1, int d2=1, int d3=1);
     Table(const Table&);
     explicit Table(const char*);
+    explicit Table(const char*, const char*, const int);
 
     // Destructor
     virtual ~Table();
