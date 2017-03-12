@@ -293,6 +293,19 @@ void cpm_part2(string path_input, string prefix){
     assert(poly >= 0);
     get_fit_matrix_ffi(pre_matrix, n_dates, n_pre, poly, pre_matrix2);
 
+    int n_test1 = pre_matrix.get_size1();
+    int n_test2 = pre_matrix.get_size2();
+    Table test(n_test1, n_test2);
+    test = pre_matrix;
+    for(i=n_test1-10; i<n_test1; ++i){
+        for(j=n_test2-10; j<n_test2; ++j){
+            cout << test(i,j);
+        }
+        cout << endl;
+    }
+
+            cout << pre_matrix(i, j) << endl;
+
     // Prepare regularization
     Table l2_tab(n_pre2);
     l2_tab = l2;
