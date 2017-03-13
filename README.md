@@ -82,7 +82,14 @@ install GCC 5 or later (see <https://gcc.gnu.org>).
 ### Part 1
 
 The first step is to follow the instructions provided in `tutorial.md`
-up to the title CPM_PART2.
+up to the title CPM_PART2. Then, it is necessary to prepare the files
+read by the C++ code. From a shell,
+```
+$ path-to-main-directory/source/K2CPM/code/
+$ python conversion2cpp.py -p path-inputoutput
+```
+where `path-inputoutput/` is the path you are running the 
+`tutorial.md`.
 
 ### Part 2
 
@@ -93,7 +100,7 @@ $ path-to-main-directory/source/K2CPM/code/
 $ ./libcpm path-inputoutput/ reference l2
 ```
 where `path-to-main-directory` is the full path to the directory
-`K2-CPM`, path-inputoutput/ is the path you are using to follow
+`K2-CPM`, `path-inputoutput/` is the path you are using to follow
 CPM_PART1 (see `tutorial.md`), `reference` is the content of the
 variable `stem` from CPM_PART1 (see `tutorial.md`) and `l2` is the
 regularization strengh (e.g. 1000).
