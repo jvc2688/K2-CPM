@@ -176,7 +176,7 @@ void fit_target(const Table& tpf_timeserie, Table& pre_matrix2,
         Table pre_matrix3(n_dates2, n_pre);
         i2=0;
         for(i=0; i<n_dates; ++i) {
-            if ((time(i)<train_lim[0]) || (time(i)>train_lim[1])) {
+            if ((tpf_timeserie(i, 0)<train_lim[0]) || (tpf_timeserie(i, 0)>train_lim[1])) {
                 for(j=0; j<n_pre; ++j) {
                     pre_matrix3.set(i2, j) = pre_matrix2(i, j);
                 }
@@ -185,6 +185,7 @@ void fit_target(const Table& tpf_timeserie, Table& pre_matrix2,
                 ++i2;
             }
         }
+        yvar = 1.0;
         linear_least_squares(&pre_matrix2, &y, &yvar, &l2_tab, &result);
     }
 }
