@@ -167,27 +167,26 @@ void fit_target(const Table& tpf_timeserie, Table& pre_matrix2,
     if(n_dates2 == n_dates) {
         for(i=0; i<n_dates2; ++i) {
             y.set(i) = tpf_timeserie(i, 1);
-            // yvar.set(i) = pow(tpf_timeserie(i, 2), 2);
+            // yvar.set(i) = pow(tpf_timeserie(i, 2), 2);  // --> Commented to follow python version.
         }
         yvar = 1.0;
         linear_least_squares(&pre_matrix2, &y, &yvar, &l2_tab, &result);
     }
-//    else {
-//        Table predictor_flux_matrix_curr(n_trainmask, n_pred), target_flux_curr(n_trainmask);
-//        i2=0;
-//        for(i=0; i<n_dates; ++i) {
-//            if ((time(i)<train_lim[0]) || (time(i)>train_lim[1])) {
-//                for(j=0; j<n_pred; ++j) {
-//                    predictor_flux_matrix_curr.set(i2, j) = predictor_flux_matrix(i, j);
-//                }
-//                target_flux_curr.set(i2) = target_flux(i);
-//                covar_list_curr.set(i2) = covar_list(i);
-//                i2++;
-//            }
-//        }
-//        covar_list_curr = pow(covar_list_curr, 2);
-//        linear_least_squares(&predictor_flux_matrix_curr, &target_flux_curr, &covar_list_curr, &l2_vector, &result);
-//    }
+    else {
+        Table pre_matrix3(n_dates2, n_pre);
+        i2=0;
+        for(i=0; i<n_dates; ++i) {
+            if ((time(i)<train_lim[0]) || (time(i)>train_lim[1])) {
+                for(j=0; j<n_pre; ++j) {
+                    pre_matrix3.set(i2, j) = pre_matrix2(i, j);
+                }
+                y.set(i2) = tpf_timeserie(i, 1);
+                // yvar.set(i) = pow(tpf_timeserie(i, 2), 2);  // --> Commented to follow python version.
+                ++i2;
+            }
+        }
+        linear_least_squares(&pre_matrix2, &y, &yvar, &l2_tab, &result);
+    }
 }
 //==================================================================//
 void get_fit_matrix_ffi(Table& pre_matrix, int n_dates, int n_pre,
