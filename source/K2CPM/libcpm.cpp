@@ -17,7 +17,7 @@ using namespace std;
 //==================================================================//
 // Functions
 //==================================================================//
-void linear_least_squares(Table* a, Table* y, Table* yvar,
+void linear_least_squares(Table* a, Table* y, const Table* yvar,
     const Table* l2_tab, Table* result){
 /*
     Solver of linear systems using Cholesky's decomposition. Let's define
@@ -39,15 +39,15 @@ void linear_least_squares(Table* a, Table* y, Table* yvar,
 
     Inputs
     ------
-    a -- Pointer to Table of dimension n_data x n_predictors
-        The basis matrix.
-    y -- Pointer to Table with dimension n_data
-        The observations.
-    yvar -- Pointer to Table with dimension n_data
+    a -- Table *, dimension n_data x n_predictors.
+        The basis matrix. Will be overwritten.
+    y -- Table *, dimension n_data.
+        The observations. Will be overwritten.
+    yvar -- Table *, dimension n_data.
         The observational variance of the points y.
-    l2 -- Pointer to Table with dimension n_predictors
+    l2 -- Table *, dimension n_predictors.
         The L2 regularization strength.
-    result -- Pointer to Table with dimension n_predictors
+    result -- Table *, dimension n_predictors.
         The solution will be written in this Table.
 */
 
@@ -121,26 +121,25 @@ void linear_least_squares(Table* a, Table* y, Table* yvar,
 }
 //==================================================================//
 void fit_target(const Table& tpf_timeserie, Table& pre_matrix2,
-    Table& l2_tab, double* train_lim, Table& result){
+    const Table& l2_tab, const double* train_lim, Table& result){
 /*
-    Fit the fluxes of the pixels.
+    Fit the fluxes.
 
     Input
     -----
-    target_flux -- Table, dimension n_dates
-        The target flux.
-    predictor_flux_matrix -- Table, dimension n_dates x n_pred
-        The flux of nearby stars used in the fitting process.
-    time -- Table, dimension n_dates
-        Date of the observations.
-    covar_list -- Table, dimension n_dates
-        List of the standard deviation for the predictors.
-    l2_vector -- Table, dimension n_pred
+    tpf_timeserie -- Table &, dimension (n_dates x 3).
+        First column is the date, second column is the target flux, third
+        column is the error on the flux.
+    pre_matrix2 -- Table &, dimension n_dates x n_pre.
+        The flux of nearby stars used in the fitting process. Here, n_pre is
+        the predictors number plus the polynomial order. This Table is
+        overwritten.
+    l2_tab -- Table &, dimension n_pre.
         Array of L2 regularization strength.
-    train_lim -- array of double, dimension 2.
+    train_lim -- double *, dimension 2.
         The dates between train_lim[0] and train_lim[1] are excluded from
         the fit.
-    result -- Table, dimension n_pred
+    result -- Table &, dimension n_pre
         Result of the fit will be written in this Table.
 */
 
@@ -190,26 +189,25 @@ void fit_target(const Table& tpf_timeserie, Table& pre_matrix2,
     }
 }
 //==================================================================//
-void get_fit_matrix_ffi(Table& pre_matrix, int n_dates, int n_pre,
-    int poly, Table& pre_matrix2){
+void get_fit_matrix_ffi(const Table& pre_matrix, const int n_dates,
+    const int n_pre, const int poly, Table& pre_matrix2){
 /*
     Prepare matrix to fit the fluxes.
 
     Input
     -----
-    target_flux -- Table, dimension n_dates
-        The target flux (masks already included).
-    predictor_matrix -- Table, dimension n_dates x n_pred
-        The flux of nearby stars used in the fitting process (masks already
-        included).
-    time -- Table, dimension n_dates
-        Date of the observations.
-    poly -- int
+    pre_matrix -- Table &, dimension n_dates x n_pre.
+        Predictors matrix, all masks already applied.
+    n_dates -- strictly positive integer.
+        Number of dates.
+    n_pre -- strictly positive integer.
+        Number of predictors.
+    poly -- strictly positive integer.
         Order of polynomials on time to be added.
     ml -- ?
-        ?
-    predictor_matrix_mp -- Table, dimension n_dates x (n_pred + poly + 1)
-        Same as predictor_matrix with polynomial terms.
+        *** Microlensing model to be added. ***
+    pre_matrix2 -- Table &, dimension n_dates x (n_pre + poly + 1).
+        Same as pre_matrix with polynomial terms.
 */
 
     // Add polynomial terms
@@ -224,7 +222,7 @@ void get_fit_matrix_ffi(Table& pre_matrix, int n_dates, int n_pre,
         }
     }
 
-    // ************ !!! ADD HERE CONCATENATION WITH ml !!! ************
+    // ************ !!! ADD HERE CONCATENATION WITH microlensing model !!! ************
 }
 //==================================================================//
 void cpm_part2(string path_input, string prefix, double l2){
@@ -242,10 +240,11 @@ void cpm_part2(string path_input, string prefix, double l2){
 
     string line, last_line, lastline, delimiter, auxstring;
 
-    train_lim[0] = -1;
-    train_lim[1] = -1;
+    train_lim[0] = -1;  // Not yet possible to use train_lim
+    train_lim[1] = -1;  // Not yet possible to use train_lim
 
     // Define file names
+    // -----------------
     auxstring = path_input + prefix;
     pixel_flux_fname = auxstring + "_pixel_flux.cpp.dat";
     epoch_mask_fname = auxstring + "_epoch_mask.cpp.dat";
@@ -270,7 +269,7 @@ void cpm_part2(string path_input, string prefix, double l2){
     // Calculations
     // ------------
     n_pre2 = n_pre + poly + 1;
-    // n_pred_poly = n_pred + poly + 1 + 1;  // +1 for poly +1 for ml
+    // n_pred_poly = n_pred + poly + 1 + 1;  // +1 for polynomial +1 for microlensing model
 
     // Add polynomial terms to predictor matrix
     Table pre_matrix2(n_dates, n_pre2);
@@ -281,10 +280,6 @@ void cpm_part2(string path_input, string prefix, double l2){
     Table l2_tab(n_pre2);
     l2_tab = l2;
     if (n_dates < n_pre2) for(i=n_dates; i<n_pre2; ++i) l2_tab.set(i) = 0.0;
-
-    // Prepare uncertainties
-//    Table covar_list(n_dates);
-//    covar_list = tpf_flux_err;
 
     // Fit target
     Table result(n_pre2);
