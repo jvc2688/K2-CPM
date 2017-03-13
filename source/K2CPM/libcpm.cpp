@@ -92,10 +92,6 @@ void linear_least_squares(Table* a, Table* y, Table* yvar,
     }
     ciy = (*y) / (*yvar);
 
-for(i=0; i<dim1a; ++i){
-    if ((*yvar)(i)==0) cout << i << endl;
-    }
-
     // Compute the pre-factor
     // ----------------------
     for(i = 0; i < dim2a; ++i){
@@ -109,23 +105,8 @@ for(i=0; i<dim1a; ++i){
     for(i=0; i<dim2a; ++i){
         s = 0;
         for(j=0; j<dim1a; ++j) s += at(i, j) * ciy(j);
-        b.set(i) = 1;
+        b.set(i) = s;
     }
-
-// *************************************
-//    for(i=b.get_size1()-10; i<b.get_size1(); ++i){
-//    for(i=0; i<10; ++i){
-//        cout << b(i) << "\t";
-//    }
-//    cout << endl;
-//cout << at.get_size1() << " " << at.get_size2() << endl;
-//    for(i=at.get_size1()-10; i<at.get_size1(); ++i){
-//        for(j=at.get_size2()-10; j<at.get_size2(); ++j){
-//            cout << at(i, j) << "\t";
-//        }
-//        cout << endl;
-//    }
-// *************************************
 
     // Incorporate any L2 regularization
     // ---------------------------------
@@ -179,7 +160,6 @@ void fit_target(const Table& tpf_timeserie, Table& pre_matrix2,
         }
     }
     else n_dates2 = n_dates;
-    cout << n_dates2 << " " << n_dates << endl;
 
     // Fit
     // ---
@@ -187,8 +167,9 @@ void fit_target(const Table& tpf_timeserie, Table& pre_matrix2,
     if(n_dates2 == n_dates) {
         for(i=0; i<n_dates2; ++i) {
             y.set(i) = tpf_timeserie(i, 1);
-            yvar.set(i) = pow(tpf_timeserie(i, 2), 2);
+            // yvar.set(i) = pow(tpf_timeserie(i, 2), 2);
         }
+        yvar = 1.0;
         linear_least_squares(&pre_matrix2, &y, &yvar, &l2_tab, &result);
     }
 //    else {
@@ -257,6 +238,7 @@ void cpm_part2(string path_input, string prefix){
     double train_lim[2];
     string pixel_flux_fname, epoch_mask_fname, pre_matrix_fname;
     string pre_epoch_mask_fname, ml_model_fname, result_fname, dif_fname;
+
     string line, last_line, lastline, delimiter, auxstring;
 
     train_lim[0] = -1;
@@ -293,18 +275,43 @@ void cpm_part2(string path_input, string prefix){
     assert(poly >= 0);
     get_fit_matrix_ffi(pre_matrix, n_dates, n_pre, poly, pre_matrix2);
 
-    int n_test1 = pre_matrix.get_size1();
-    int n_test2 = pre_matrix.get_size2();
-    Table test(n_test1, n_test2);
-    test = pre_matrix;
-    for(i=n_test1-10; i<n_test1; ++i){
-        for(j=n_test2-10; j<n_test2; ++j){
-            cout << test(i,j);
-        }
-        cout << endl;
-    }
 
-            cout << pre_matrix(i, j) << endl;
+    // *******************************************************
+    // TEST 1 DIM
+    // *******************************************************
+//    if(0){
+//        int n_test1 = (*yvar).get_size1();
+//        Table test(n_test1);
+//        test = (*yvar);
+//        for(i=n_test1-10; i<n_test1; ++i){
+//                cout << test(i) << "\t";
+//        }
+//        cout << endl;
+//    }
+    // *******************************************************
+    // TEST 2 DIM
+    // *******************************************************
+    if(0){
+        int n_test1 = (pre_matrix).get_size1();
+        int n_test2 = (pre_matrix).get_size2();
+        cout << n_test1 << "," << n_test2 << endl;
+        Table test(n_test1, n_test2);
+        test = (pre_matrix);
+        for(i=n_test1-10; i<n_test1; ++i){
+            for(j=n_test2-10; j<n_test2; ++j){
+                cout << test(i,j) << "\t";
+            }
+            cout << endl;
+        }
+    }
+    // *******************************************************
+
+
+
+
+
+
+
 
     // Prepare regularization
     Table l2_tab(n_pre2);
