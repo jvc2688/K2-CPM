@@ -238,6 +238,7 @@ void cpm_part2(string path_input, string prefix){
     double train_lim[2];
     string pixel_flux_fname, epoch_mask_fname, pre_matrix_fname;
     string pre_epoch_mask_fname, ml_model_fname, result_fname, dif_fname;
+    string predicted_flux_fname;
 
     string line, last_line, lastline, delimiter, auxstring;
 
@@ -251,8 +252,9 @@ void cpm_part2(string path_input, string prefix){
     pre_matrix_fname = auxstring + "_pre_matrix_xy.cpp.dat";
     pre_epoch_mask_fname = auxstring + "_predictor_epoch_mask.cpp.dat";
     ml_model_fname = auxstring + "_time_magnification.cpp.dat";
-    result_fname = auxstring + "_results.cpp.dat";
-    dif_fname = auxstring + "_dif.cpp.dat";
+    result_fname = auxstring + "_results.dat";
+    predicted_flux_fname = auxstring + "_predicted_flux.dat";
+    dif_fname = auxstring + "_dif.dat";
 
     // Load TPF data
     // -------------
@@ -275,44 +277,6 @@ void cpm_part2(string path_input, string prefix){
     assert(poly >= 0);
     get_fit_matrix_ffi(pre_matrix, n_dates, n_pre, poly, pre_matrix2);
 
-
-    // *******************************************************
-    // TEST 1 DIM
-    // *******************************************************
-//    if(0){
-//        int n_test1 = (*yvar).get_size1();
-//        Table test(n_test1);
-//        test = (*yvar);
-//        for(i=n_test1-10; i<n_test1; ++i){
-//                cout << test(i) << "\t";
-//        }
-//        cout << endl;
-//    }
-    // *******************************************************
-    // TEST 2 DIM
-    // *******************************************************
-    if(0){
-        int n_test1 = (pre_matrix).get_size1();
-        int n_test2 = (pre_matrix).get_size2();
-        cout << n_test1 << "," << n_test2 << endl;
-        Table test(n_test1, n_test2);
-        test = (pre_matrix);
-        for(i=n_test1-10; i<n_test1; ++i){
-            for(j=n_test2-10; j<n_test2; ++j){
-                cout << test(i,j) << "\t";
-            }
-            cout << endl;
-        }
-    }
-    // *******************************************************
-
-
-
-
-
-
-
-
     // Prepare regularization
     Table l2_tab(n_pre2);
     l2_tab = l2;
@@ -334,7 +298,7 @@ void cpm_part2(string path_input, string prefix){
     }
 
     Table dif(n_dates);
-    for(i=0; i<n_dates; ++i) dif.set(i) = tpf_timeserie(i, 0) - flux_fit(i);
+    for(i=0; i<n_dates; ++i) dif.set(i) = tpf_timeserie(i, 1) - flux_fit(i);
 
     // Save results in files
     // ---------------------
@@ -343,6 +307,14 @@ void cpm_part2(string path_input, string prefix){
         result_file << fixed << setprecision(6);
         for (i=0; i<n_pre2; ++i) result_file << result(i) << endl;
         result_file.close();
+    }
+    else cout << "Unable to open file";
+
+    ofstream predicted_flux_file (predicted_flux_fname);
+    if (predicted_flux_file.is_open()){
+        predicted_flux_file << fixed << setprecision(6);
+        for (i=0; i<n_dates; ++i) predicted_flux_file << flux_fit(i) << endl;
+        predicted_flux_file.close();
     }
     else cout << "Unable to open file";
 
@@ -377,135 +349,3 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-
-
-
-
-//    // Number of dates
-//    n_dates=0;
-//    ifstream pixel_flux_file_lines (pixel_flux_fname);
-//    if (pixel_flux_file_lines.is_open()){
-//        while (pixel_flux_file_lines >> x >> x >> x) ++n_dates;
-//        pixel_flux_file_lines.close();
-//    }
-//    else cout << "Unable to open file";
-//    assert(n_dates > 0);
-//
-//    // Find quickly the number of predictors
-//    delimiter = " ";
-//    n_pred = 0;
-//    ifstream file_pre_matrix_file_lines;  // Look directly to last line
-//    file_pre_matrix_file_lines.open(pre_matrix_fname);
-//    if (file_pre_matrix_file_lines.is_open()){
-//        i2 = -1;
-//        lastline="";
-//        lsize=-1;
-//        while((i2==-1) || (lsize <= lastline.size())){
-//            lsize = lastline.size();
-//            file_pre_matrix_file_lines.seekg (i2, file_pre_matrix_file_lines.end);
-//            getline (file_pre_matrix_file_lines, lastline);
-//            i2--;
-//        }
-//        getline (file_pre_matrix_file_lines, lastline);
-//        file_pre_matrix_file_lines.close();
-//
-//        i = 0;  // Find n_pred value
-//        string token;
-//        while ((i = lastline.find(delimiter)) != string::npos) {
-//            token = lastline.substr(0, i);
-//            n_pred = stoi(token);
-//            lastline.erase(0, i + delimiter.length());
-//        }
-//    }
-//    else cout << "Unable to open file";
-//    ++n_pred;
-//    assert((n_pred>0));
-//
-//    // Load files
-//    // ----------
-//    // Load time and flux
-//    n_dates_wmask = 0;
-//    epoch_mask = new int [n_dates];
-//    ifstream epoch_mask_file (epoch_mask_fname);
-//    if (epoch_mask_file.is_open()){
-//        for (i=0; i<n_dates; ++i){
-//            epoch_mask_file >> line;
-//            for(j=0; j<line.length(); j++) line[j] = toupper(line[j]);
-//            assert((line=="TRUE") || (line=="FALSE"));
-//            if(line=="TRUE") {
-//                epoch_mask[i] = 1;
-//                ++n_dates_wmask;
-//            }
-//            else epoch_mask[i] = 0;
-//        }
-//        epoch_mask_file.close();
-//    }
-//    else cout << "Unable to open file";
-//    assert((n_dates_wmask>0) && (n_dates_wmask<=n_dates));
-//
-//    Table tpf_time(n_dates_wmask), tpf_flux(n_dates_wmask), tpf_flux_err(n_dates_wmask);
-//    ifstream pixel_flux_file (pixel_flux_fname);
-//    if (pixel_flux_file.is_open()){
-//        i2 = 0;
-//        for (i=0; i<n_dates; ++i){
-//            if (epoch_mask[i]){
-//                pixel_flux_file >> tpf_time.set(i2) >> tpf_flux.set(i2) >> tpf_flux_err.set(i2);
-//                ++i2;
-//            }
-//            else pixel_flux_file >> x >> x >> x;
-//        }
-//        pixel_flux_file.close();
-//    }
-//    else cout << "Unable to open file";
-//    assert(i2==n_dates_wmask);
-//
-//    // Load predictor matrix
-//    //Table pre_matrix(n_dates_wmask, n_pred);
-//    ifstream file_pre_matrix_file (pre_matrix_fname);
-//    if (file_pre_matrix_file.is_open()){
-//        for (i=0; i<n_dates_wmask; ++i){
-//            for (j=0; j<n_pred; ++j){
-//                file_pre_matrix_file >> x >> x >> pre_matrix.set(i, j);
-//            }
-//        }
-//        file_pre_matrix_file.close();
-//    }
-//    else cout << "Unable to open file";
-
-    // Load microlensing model
-/*    int n_ml=0;
-    ifstream f1_mask (ml_model_fname);
-    if (f1_mask.is_open()){
-        while(f1_mask >> x) ++n_ml;
-    }
-    else cout << "Unable to open file";
-    f1_mask.close();
-
-    Table ml_mask(n_ml);
-    ifstream f2_mask (pre_epoch_mask_fname);
-    if (f2_mask.is_open()){
-        for (i=0; i<n_ml; ++i){
-            f2_mask >> i2;
-            if(i2) {
-                ml_mask.set(i) = 1;
-            }
-            else ml_mask.set(i) = 0;
-        }
-    }
-    else cout << "Unable to open file";
-    f2_mask.close();
-
-    Table ml(n_dates);
-    ifstream f1_ml (ml_model_fname);
-    if (f1_ml.is_open()){
-        i2 = 0;
-        for (i=0; i<n_ml; ++i){
-            f1_ml >> x >> x;
-            if(ml_mask(i)) {
-                ml.set(i2) = x;
-                i2++;
-            }
-        }
-    }
-    else cout << "Unable to open file";
-    f1_ml.close();*/
