@@ -3,7 +3,7 @@
 # Makefile that compiles libcpm. It should work in most (all) UNIX
 # systems. If you are not running this code in UNIX (Linux or MacOS), or
 # if you would like to choose your own C++ compiler, please edit the
-# lines 27 and 28.
+# lines 24 and 25.
 # ===================================================================#
 
 OSNAME = $(shell uname -s)
