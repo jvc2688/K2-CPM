@@ -13,11 +13,12 @@ else
 	CC = g++
 endif
 
-CFLAGS = -Wall
+#CFLAGS = -Wall
+CFLAGS =
 ifeq ($(OSNAME),Linux)
-  CFLAGS += -std=gnu++11 -O2
+	CFLAGS += -std=gnu++11 -O2
 else
-  CFLAGS += -std=c++11 -stdlib=libc++ -O2
+	CFLAGS += -std=c++11 -stdlib=libc++ -O2
 endif
 
 # CC = your-own-compiler
