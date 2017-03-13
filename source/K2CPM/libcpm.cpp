@@ -237,7 +237,7 @@ void cpm_part2(string path_input, string prefix){
     double l2 = 1000.0, x;
     double train_lim[2];
     string pixel_flux_fname, epoch_mask_fname, pre_matrix_fname;
-    string pre_epoch_mask_fname, ml_model_fname, result_fname, dif_fname;
+    string pre_epoch_mask_fname, ml_model_fname, result_fname, cpmflux_fname;
     string predicted_flux_fname;
 
     string line, last_line, lastline, delimiter, auxstring;
@@ -254,7 +254,7 @@ void cpm_part2(string path_input, string prefix){
     ml_model_fname = auxstring + "_time_magnification.cpp.dat";
     result_fname = auxstring + "_results.dat";
     predicted_flux_fname = auxstring + "_predicted_flux.dat";
-    dif_fname = auxstring + "_dif.dat";
+    cpmflux_fname = auxstring + "_cpmflux.dat";
 
     // Load TPF data
     // -------------
@@ -310,19 +310,15 @@ void cpm_part2(string path_input, string prefix){
     }
     else cout << "Unable to open file";
 
-    ofstream predicted_flux_file (predicted_flux_fname);
-    if (predicted_flux_file.is_open()){
-        predicted_flux_file << fixed << setprecision(6);
-        for (i=0; i<n_dates; ++i) predicted_flux_file << flux_fit(i) << endl;
-        predicted_flux_file.close();
-    }
-    else cout << "Unable to open file";
-
-    ofstream dif_file (dif_fname);
-    if (dif_file.is_open()){
-        dif_file << fixed << setprecision(6);
-        for (i=0; i<n_dates; ++i) dif_file << dif(i) << endl;
-        dif_file.close();
+    ofstream cpmflux (cpmflux_fname);
+    if (cpmflux.is_open()){
+        for (i=0; i<n_dates; ++i) {
+            cpmflux << fixed << setprecision(5);
+            cpmflux << tpf_timeserie(i, 0) << " ";
+            cpmflux << fixed << setprecision(8);
+            cpmflux << flux_fit(i) << " " << dif(i) << endl;
+        }
+        cpmflux.close();
     }
     else cout << "Unable to open file";
 
