@@ -227,14 +227,14 @@ void get_fit_matrix_ffi(Table& pre_matrix, int n_dates, int n_pre,
     // ************ !!! ADD HERE CONCATENATION WITH ml !!! ************
 }
 //==================================================================//
-void cpm_part2(string path_input, string prefix){
+void cpm_part2(string path_input, string prefix, double l2){
 
     // Declaration and initialisations
     // -------------------------------
     int i, i2, j, poly=0, lsize;
     int n_dates, n_pre, n_pre2, n_pre_dates;
     int n_pred, n_dates_wmask, n_pred_poly, * epoch_mask;
-    double l2 = 1000.0, x;
+    double x;
     double train_lim[2];
     string pixel_flux_fname, epoch_mask_fname, pre_matrix_fname;
     string pre_epoch_mask_fname, ml_model_fname, result_fname, cpmflux_fname;
@@ -331,17 +331,19 @@ int main(int argc, char* argv[]) {
 
     // Declarations
     // ------------
+    double l2;
     string path_input, prefix;
 
     // Check command line options
     // --------------------------
-    assert(argc == 3);
+    assert(argc == 4);
 
     // Run CPM part 2
     // --------------
     path_input = argv[1];
     prefix = argv[2];
-    cpm_part2(path_input, prefix);
+    l2 = atof(argv[3]);
+    cpm_part2(path_input, prefix, l2);
 
     return 0;
 }
