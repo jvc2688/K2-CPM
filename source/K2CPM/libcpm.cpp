@@ -278,14 +278,14 @@ void cpm_part2(string path_input, string prefix, double l2){
     // Define file names
     // -----------------
     auxstring = path_input + prefix;
-    pixel_flux_fname = auxstring + "_pixel_flux.cpp.dat";
-    epoch_mask_fname = auxstring + "_epoch_mask.cpp.dat";
-    pre_matrix_fname = auxstring + "_pre_matrix_xy.cpp.dat";
-    pre_epoch_mask_fname = auxstring + "_predictor_epoch_mask.cpp.dat";
-    ml_model_fname = auxstring + "_time_magnification.cpp.dat";
-    result_fname = auxstring + "_results.dat";
+    pixel_flux_fname = auxstring + "pixel_flux.cpp.dat";
+    epoch_mask_fname = auxstring + "epoch_mask.cpp.dat";
+    pre_matrix_fname = auxstring + "pre_matrix_xy.cpp.dat";
+    pre_epoch_mask_fname = auxstring + "predictor_epoch_mask.cpp.dat";
+    ml_model_fname = auxstring + "time_magnification.cpp.dat";
+    result_fname = auxstring + "result.dat";
     predicted_flux_fname = auxstring + "_predicted_flux.dat";
-    cpmflux_fname = auxstring + "_cpmflux.dat";
+    cpmflux_fname = auxstring + "cpmflux.dat";
 
     // Load TPF data
     // -------------
