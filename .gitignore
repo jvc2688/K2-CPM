@@ -4,7 +4,8 @@ hdf5/
 movie/
 code/others/
 .idea/
-source/K2CPM/data_K2C9
+source/K2CPM/data_K2C9/
+source/K2CPM/tests/tpf/
 *.ipynb
 *.dat
 *.png
