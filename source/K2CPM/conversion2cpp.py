@@ -76,12 +76,12 @@ if (__name__ == "__main__"):
     # Save data for C++ version
     # -------------------------
     if (options['ref'] != ""):
-        fname = options['path'] + options['ref'] + "_predictor_epoch_mask.dat"
+        fname = options['path'] + options['ref'] + "predictor_epoch_mask.dat"
         if not os.path.exists(fname):
             text = "File not found:\n{:s}".format(fname)
             sys.exit(text)
     else:
-        fname = glob.glob(options['path'] + "*_predictor_epoch_mask.dat")
+        fname = glob.glob(options['path'] + "*predictor_epoch_mask.dat")
         if len(fname) > 1:
             text = "Several files with different references are found."
             text += "\nPlease use the option -r to give the reference."
@@ -89,7 +89,7 @@ if (__name__ == "__main__"):
         if len(fname) == 1:
             fname = fname[0]
         if (len(fname) == 0) or (not os.path.exists(fname)):
-            text = "File not found:\n{:s}".format(options['path'] + "*_predictor_epoch_mask.dat")
+            text = "File not found:\n{:s}".format(options['path'] + "*predictor_epoch_mask.dat")
             sys.exit(text)
 
     file = open(fname, 'r')
@@ -111,12 +111,12 @@ if (__name__ == "__main__"):
     file.close()
 
     if (options['ref'] != ""):
-        fname = options['path'] + options['ref'] + "_pre_matrix_xy.dat"
+        fname = options['path'] + options['ref'] + "pre_matrix_xy.dat"
         if not os.path.exists(fname):
             text = "File not found:\n{:s}".format(fname)
             sys.exit(text)
     else:
-        fname = glob.glob(options['path'] + "*_pre_matrix_xy.dat")
+        fname = glob.glob(options['path'] + "*pre_matrix_xy.dat")
         if len(fname) > 1:
             text = "Several files with different references are found."
             text += "\nPlease use the option -r to give the reference."
@@ -124,7 +124,7 @@ if (__name__ == "__main__"):
         if len(fname) == 1:
             fname = fname[0]
         if (len(fname) == 0) or (not os.path.exists(fname)):
-            text = "File not found:\n{:s}".format(options['path'] + "*_pre_matrix_xy.dat")
+            text = "File not found:\n{:s}".format(options['path'] + "*pre_matrix_xy.dat")
             sys.exit(text)
 
     file = open(fname, 'r')
@@ -145,12 +145,12 @@ if (__name__ == "__main__"):
     file.close()
 
     if (options['ref'] != ""):
-        fname = options['path'] + options['ref'] + "_pixel_flux.dat"
+        fname = options['path'] + options['ref'] + "pixel_flux.dat"
         if not os.path.exists(fname):
             text = "File not found:\n{:s}".format(fname)
             sys.exit(text)
     else:
-        fname = glob.glob(options['path'] + "*_pixel_flux.dat")
+        fname = glob.glob(options['path'] + "*pixel_flux.dat")
         if len(fname) > 1:
             text = "Several files with different references are found."
             text += "\nPlease use the option -r to give the reference."
@@ -158,7 +158,7 @@ if (__name__ == "__main__"):
         if len(fname) == 1:
             fname = fname[0]
         if (len(fname) == 0) or (not os.path.exists(fname)):
-            text = "File not found:\n{:s}".format(options['path'] + "*_pixel_flux.dat")
+            text = "File not found:\n{:s}".format(options['path'] + "*pixel_flux.dat")
             sys.exit(text)
 
     file = open(fname, 'r')
@@ -177,12 +177,12 @@ if (__name__ == "__main__"):
     file.close()
 
     if (options['ref'] != ""):
-        fname = options['path'] + options['ref'] + "_epoch_mask.dat"
+        fname = options['path'] + options['ref'] + "epoch_mask.dat"
         if not os.path.exists(fname):
             text = "File not found:\n{:s}".format(fname)
             sys.exit(text)
     else:
-        fname = glob.glob(options['path'] + "*[!predictor]_epoch_mask.dat")
+        fname = glob.glob(options['path'] + "*[!predictor_]epoch_mask.dat")
         if len(fname) > 1:
             text = "Several files with different references are found."
             text += "\nPlease use the option -r to give the reference."
@@ -190,7 +190,7 @@ if (__name__ == "__main__"):
         if len(fname) == 1:
             fname = fname[0]
         if (len(fname) == 0) or (not os.path.exists(fname)):
-            text = "File not found:\n{:s}".format(options['path'] + "*_epoch_mask.dat")
+            text = "File not found:\n{:s}".format(options['path'] + "*epoch_mask.dat")
             sys.exit(text)
 
     file = open(fname, 'r')
