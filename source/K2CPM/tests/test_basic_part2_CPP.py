@@ -12,42 +12,106 @@ import numpy as np
 # ====================================================================
 # Functions
 # ====================================================================
-def single_test(n_test=1):
+def check_slash(path):
+    if len(path) > 0:
+        if path[-1] != '/':
+            path = '{:s}/'.format(path)
+    return path
+# --------------------------------------------------------------------
+def getpath_this():
+    """Return the path of the event directory.
+
+    :return: path of event directory
+    :rtype: string
+    """
+    path = os.path.realpath(__file__)
+    return '{:s}/'.format('/'.join(path.split('/')[:-1]))
+# --------------------------------------------------------------------
+def single_test(ref=1, l2=1000):
 
     # Change current path
     # -------------------
-    path_code = "../code/"
-    #os.chdir(path_code)
+    path_this = getpath_this()
+    path_this = check_slash(path_this)
 
-    print "coucou"
+    path_run = os.getcwd()
+    path_run = check_slash(path_run)
+
+    path_code = "{:s}../".format(path_this)
+    os.chdir(path_code)
+
+    # Prepare files
+    # -------------
+    pre_matrix_fname = "tests/intermediate/{:d}-pre_matrix.dat".format(ref)
+    pre_matrix = np.loadtxt(pre_matrix_fname, dtype="S100")
+    file = open("tests/intermediate/{:d}-pre_matrix_xy.dat".format(ref), 'w')
+    for i in xrange(pre_matrix.shape[0]):
+        for j in xrange(pre_matrix.shape[1]):
+            text = "{:d} {:d} {:s}\n".format(i, j, pre_matrix[i][j])
+            file.write(text)
+    file.close()
+
+    cmd_list = ["python", "conversion2cpp.py", "-p", "tests/intermediate/", "-r", "{:d}-".format(ref)]
+    output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
+    if output!="": print output
 
     # Execute the C++ routine
     # -----------------------
-    # cmd_list = ["./libcpm", "{:d}".format(n_test)]
-    # output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
-    # # print output
-    #
-    # # Change current path
-    # # -------------------
-    # path_code = "../test/"
-    # os.chdir(path_code)
-    #
-    # # Define file names
-    # # -----------------
-    # file_out_result = 'output/{:}-result.dat'.format(n_test)
-    # file_expect_result = 'output/expected/{:}-result.dat'.format(n_test)
-    # file_out_dif = 'output/{:}-dif.dat'.format(n_test)
-    # file_expect_dif = 'output/expected/{:}-dif.dat'.format(n_test)
-    #
-    # # Load result files
-    # # -----------------
-    # out_result = np.loadtxt(file_out_result)
-    # expect_result = np.loadtxt(file_expect_result)
-    # out_dif = np.loadtxt(file_out_dif)
-    # expect_dif = np.loadtxt(file_expect_dif)
-    #
-    # # Test the differences
-    # # --------------------
+    cmd_list = ["./libcpm", "tests/intermediate/", "{:d}-".format(ref), "{:.1f}".format(l2)]
+    output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
+    if output != "": print output
+
+    # Move the output files
+    # ---------------------
+    cmd_list = ["mv", "tests/intermediate/{:d}-cpmflux.dat".format(ref), "tests/output/"]
+    output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
+    if output != "": print output
+
+    cmd_list = ["mv", "tests/intermediate/{:d}-result.dat".format(ref), "tests/output/"]
+    output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
+    if output != "": print output
+
+    cmd_list = ["rm", "tests/intermediate/{:d}-epoch_mask.cpp.dat".format(ref)]
+    output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
+    if output != "": print output
+
+    cmd_list = ["rm", "tests/intermediate/{:d}-pixel_flux.cpp.dat".format(ref)]
+    output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
+    if output != "": print output
+
+    cmd_list = ["rm", "tests/intermediate/{:d}-pre_matrix_xy.cpp.dat".format(ref)]
+    output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
+    if output != "": print output
+
+    cmd_list = ["rm", "tests/intermediate/{:d}-pre_matrix_xy.dat".format(ref)]
+    output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
+    if output != "": print output
+
+    cmd_list = ["rm", "tests/intermediate/{:d}-predictor_epoch_mask.cpp.dat".format(ref)]
+    output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
+    if output != "": print output
+
+    # Change current path
+    # -------------------
+    path_test = "tests/"
+    os.chdir(path_test)
+
+    # Define file names
+    # -----------------
+    file_out_result = 'output/{:}-result.dat'.format(ref)
+    file_expect_result = 'output/expected/{:}-result.dat'.format(ref)
+    file_out_dif = 'output/{:}-cpmflux.dat'.format(ref)
+    file_expect_dif = 'output/expected/{:}-dif.dat'.format(ref)
+
+    # Load result files
+    # -----------------
+    out_result = np.loadtxt(file_out_result)
+    expect_result = np.loadtxt(file_expect_result)
+    out_dif = np.loadtxt(file_out_dif)
+    expect_dif = np.loadtxt(file_expect_dif)
+
+    # Test the differences
+    # --------------------
     # np.testing.assert_almost_equal(out_result, expect_result, decimal=4)
     # np.testing.assert_almost_equal(out_dif, expect_dif, decimal=4)
 # --------------------------------------------------------------------
@@ -64,5 +128,5 @@ def test_4():
     single_test(4)
 # --------------------------------------------------------------------
 if __name__ == '__main__':
-    single_test(n_test=1)
+    single_test(ref=1, l2=1000)
 # --------------------------------------------------------------------
