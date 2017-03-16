@@ -94,13 +94,13 @@ def single_test(ref=1, l2=1000):
     # -----------------
     out_result = np.loadtxt(file_out_result)
     expect_result = np.loadtxt(file_expect_result)
-    out_dif = np.loadtxt(file_out_dif)
+    out_cpmflux = np.loadtxt(file_out_dif)
     expect_dif = np.loadtxt(file_expect_dif)
 
     # Test the differences
     # --------------------
-    # np.testing.assert_almost_equal(out_result, expect_result, decimal=4)
-    # np.testing.assert_almost_equal(out_dif, expect_dif, decimal=4)
+    np.testing.assert_almost_equal(out_result, expect_result, decimal=4)
+    np.testing.assert_almost_equal(out_cpmflux.T[2], expect_dif, decimal=4)
 # --------------------------------------------------------------------
 def test_1():
     single_test(1)
