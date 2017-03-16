@@ -102,8 +102,9 @@ $ ./libcpm path-inputoutput/ reference l2
 where `path-to-main-directory` is the full path to the directory
 `K2-CPM`, `path-inputoutput/` is the path you are using to follow
 CPM_PART1 (see `tutorial.md`), `reference` is the content of the
-variable `stem` from CPM_PART1 (see `tutorial.md`) and `l2` is the
-regularization strengh (e.g. 1000).
+variable `stem` from CPM_PART1 (see `tutorial.md`), including `_` at the end (if 
+stem is `91_49_1022_119`, the reference is `91_49_1022_119_`) and `l2` is the
+regularization strengh (e.g. 1000).`
 
 The above command run calculations and write the results is two files,
 in the directory path-inputoutput/:
