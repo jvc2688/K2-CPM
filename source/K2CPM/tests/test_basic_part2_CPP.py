@@ -42,15 +42,6 @@ def single_test(ref=1, l2=1000):
 
     # Prepare files
     # -------------
-    pre_matrix_fname = "tests/intermediate/{:d}-pre_matrix.dat".format(ref)
-    pre_matrix = np.loadtxt(pre_matrix_fname, dtype="S100")
-    file = open("tests/intermediate/{:d}-pre_matrix_xy.dat".format(ref), 'w')
-    for i in xrange(pre_matrix.shape[0]):
-        for j in xrange(pre_matrix.shape[1]):
-            text = "{:d} {:d} {:s}\n".format(i, j, pre_matrix[i][j])
-            file.write(text)
-    file.close()
-
     cmd_list = ["python", "conversion2cpp.py", "-p", "tests/intermediate/", "-r", "{:d}-".format(ref)]
     output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
     if output!="": print output
@@ -80,10 +71,6 @@ def single_test(ref=1, l2=1000):
     if output != "": print output
 
     cmd_list = ["rm", "tests/intermediate/{:d}-pre_matrix_xy.cpp.dat".format(ref)]
-    output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
-    if output != "": print output
-
-    cmd_list = ["rm", "tests/intermediate/{:d}-pre_matrix_xy.dat".format(ref)]
     output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
     if output != "": print output
 
