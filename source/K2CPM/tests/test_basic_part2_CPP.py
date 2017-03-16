@@ -101,18 +101,24 @@ def single_test(ref=1, l2=1000):
     # --------------------
     np.testing.assert_almost_equal(out_result, expect_result, decimal=4)
     np.testing.assert_almost_equal(out_cpmflux.T[2], expect_dif, decimal=4)
+
+    # Remove unuseful files
+    # ---------------------
+    cmd_list = ["rm", "output/{:d}-cpmflux.dat".format(ref)]
+    output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
+    if output != "": print output
 # --------------------------------------------------------------------
 def test_1():
-    single_test(1)
+    single_test(ref=1, l2=1000)
 # --------------------------------------------------------------------
 def test_2():
-    single_test(2)
+    single_test(ref=2, l2=1000)
 # --------------------------------------------------------------------
 def test_3():
-    single_test(3)
+    single_test(ref=3, l2=1000)
 # --------------------------------------------------------------------
 def test_4():
-    single_test(4)
+    single_test(ref=4, l2=1000)
 # --------------------------------------------------------------------
 if __name__ == '__main__':
     single_test(ref=1, l2=1000)
