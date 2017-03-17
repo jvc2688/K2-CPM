@@ -1,14 +1,28 @@
 #!/bin/bash
 # ===================================================================#
-# Makefile that compile libcpm. It is written for UNIX OS.The
-# compilation commands can differ from one OS to another. Please choose
-# between line 10 or 11 your C++ compiler: comment one of these two line
-# by using the character '#'. #
+# Makefile that compiles libcpm. It should work in most (all) UNIX
+# systems. If you are not running this code in UNIX (Linux or MacOS), or
+# if you would like to choose your own C++ compiler, please edit the
+# lines 24 and 25.
 # ===================================================================#
 
-#CC=g++
-CC=clang++
-CFLAGS=-Wall
+OSNAME = $(shell uname -s)
+ifeq ($(OSNAME),Darwin)
+	CC = clang++
+else
+	CC = g++
+endif
+
+#CFLAGS = -Wall
+CFLAGS =
+ifeq ($(OSNAME),Linux)
+	CFLAGS += -std=gnu++11 -O2
+else
+	CFLAGS += -std=c++11 -stdlib=libc++ -O2
+endif
+
+# CC = your-own-compiler
+# CFLAGS = -Wall -YourFlags
 
 EXECUTABLE = libcpm
 SOURCES = libcpm.cpp table.cpp matrix.cpp

@@ -1,4 +1,26 @@
-// A class that define a three-dimensional tables.
+//==================================================================//
+// Copyright 2017 Clement Ranc
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//==================================================================//
+// This file define a class of three dimensional table.
 //==================================================================//
 
 #ifndef __TABLE_H_
@@ -22,6 +44,8 @@ class Table {
     public:
     explicit Table(int d1, int d2=1, int d3=1);
     Table(const Table&);
+    explicit Table(const char*);
+    explicit Table(const char*, const char*, const int);
 
     // Destructor
     virtual ~Table();
@@ -52,6 +76,8 @@ class Table {
     };
 
     // Useful functions
+    void save(const char* fname) const;
+
     protected:
     virtual void print(ostream&) const;  // Print the table
 

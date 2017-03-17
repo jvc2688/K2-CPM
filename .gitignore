@@ -3,8 +3,10 @@ plots/
 hdf5/
 movie/
 code/others/
-test/tpf/
 .idea/
+source/K2CPM/data_K2C9/
+source/K2CPM/tests/tpf/
+*.cache
 *.ipynb
 *.dat
 *.png
@@ -13,4 +15,4 @@ test/tpf/
 *.o
 *.so
 *.DS_Store
-code/libcpm
+source/K2CPM/libcpm

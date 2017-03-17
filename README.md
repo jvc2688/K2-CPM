@@ -26,11 +26,12 @@ optional arguments:
 $ python run_cpm.py 200069974 92 800 1e3 0 16 5 ./tpf ./output/200069974 -p ./test_pixel.dat
 ```
 
-# Using the C++ version of the code
+# The C++ alternative
+*Suggestions about the C++ version are very welcome! Please contact Clément Ranc.*
 
 ## Introduction
 
-The C++ version replace the calculations performed when running
+The C++ version replaces the calculations performed when running
 `cpm_part2.py`,  but not the ones done by `cpm_part1.py`. The C++
 files must be compiled by hand prior using it for
 the first time, as explained below.
@@ -50,48 +51,68 @@ system solver.
 * `libcpm.cpp` and the corresponding header file `libcpm.h`: these
 files corresponds to the  main code that should be executed.
 
-* `Makefile`: this file allow compilation of the C++ version on most
-of the OS without any editing.
+* `Makefile`: this file allow compilation of the C++ version on most OS.
 
 ## Compilation
 
-In most UNIX OS, the C++ version can be compiled by the following commands:
+In linux and Mac OS, the C++ version can be compiled by the following commands:
 ```
-$ cd path/K2-CPM/code/
+$ cd path-to-main-directory/source/K2CPM/code/
 $ make
 ```
+where `path-to-main-directory` is the full path to the directory `K2-CPM` on your machine.
 
-where `path` is the full path to the directory `K2-CPM` on your machine.
+This `Makefile` will test the OS and adapt the compiler accordingly.
+If the command `make` returns an error though, it might be because
+your C++ compiler is not found or because you have not a C++ compiler
+installed.
 
-If the command `make` returns an error, it might be because your C++ compiler is not found 
-or because you have not a C++ compiler.
-
-If the first case, the problem can be solve by editing the following line
-in the file `Makefile`:
+If the first case, please edit the lines 24-25 in `Makefile`:
 ```
-#CC=g++
-CC=clang++
-CFLAGS=-Wall
+# CC = your-own-compiler
+# CFLAGS = -Wall -YourFlags
 ```
-one can uncomment the first line and comment the second one to use `g++` as a compiler
-rather than `clang++`, or just choose another compiler.
+and uncomment them by removing `# `.
 
 In the second case, it is necessary to install a C++ compiler. A free option is to 
 install GCC 5 or later (see <https://gcc.gnu.org>).
 
 ## Usage
 
-For now, the C++ version is tested and can only be run for the unit tests.
-Once compiled, the C++ version can be run directly as follow,
+### Part 1
+
+The first step is to follow the instructions provided in `tutorial.md`
+up to the title CPM_PART2. Then, it is necessary to prepare the files
+read by the C++ code. From a shell,
 ```
-$ ./libcpm
+$ path-to-main-directory/source/K2CPM/code/
+$ python conversion2cpp.py -p path-inputoutput
 ```
-or with optional arguments,
+where `path-inputoutput/` is the path you are running the 
+`tutorial.md`.
+
+### Part 2
+
+Then, the second part of the CPM will be run in C++. Once compiled,
+the C++ version can be run directly, e.g. as follow,
 ```
-$ ./libcpm 1
+$ path-to-main-directory/source/K2CPM/code/
+$ ./libcpm path-inputoutput/ reference l2
 ```
-where 1 is the number of the test. Soon, a working version that includes
-microlensing models will come.
+where `path-to-main-directory` is the full path to the directory
+`K2-CPM`, `path-inputoutput/` is the path you are using to follow
+CPM_PART1 (see `tutorial.md`), `reference` is the content of the
+variable `stem` from CPM_PART1 (see `tutorial.md`), including `_` at the end (if 
+stem is `91_49_1022_119`, the reference is `91_49_1022_119_`) and `l2` is the
+regularization strengh (e.g. 1000).`
+
+The above command run calculations and write the results is two files,
+in the directory path-inputoutput/:
+
+* `reference_results.dat`: solution of the linear system;
+
+* `reference_cpmflux.dat`: the first column is the date, the second is
+the target flux prediction,  the third is the difference flux.
 
 ## Future developments
 

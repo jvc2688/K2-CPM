@@ -1,4 +1,26 @@
-// A class that define a three-dimensional tables.
+//==================================================================//
+// Copyright 2017 Clement Ranc
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//==================================================================//
+// This file define a class of three dimensional table.
 //==================================================================//
 
 #include<fstream>
@@ -21,6 +43,72 @@ Table::Table(const Table& table_in) : size1(table_in.size1),
     tab = new double [size];
     assert(table_in.tab != 0x0);
     for (int i=0; i<size; i++) tab[i] = table_in.tab[i];
+}
+//==================================================================//
+Table::Table(const char* fname) {
+    ifstream file(fname);
+    assert(file);
+    file >> size1 >> size2 >> size3;
+    assert((size1>0) && (size2>0) && (size3>0));
+    int size = size1 * size2 * size3;
+    tab = new double[size];
+    for (int i=0; i<size; ++i) {
+        assert(file);
+        file >> tab[i];
+    }
+}
+//==================================================================//
+Table::Table(const char* fname, const char* fname_mask, const int axis) {
+    int i, i2, itab, size, n_ref, size_old, size2_old, size3_old;
+    double x;
+    Table mask(fname_mask);
+    assert((mask.get_size2()==1) && (mask.get_size3()==1));
+    n_ref = 0;
+    for (i=0; i<mask.get_size1(); ++i) {
+        if (mask(i) < 0.5) ++n_ref;
+    }
+
+    ifstream file(fname);
+    assert(file);
+    file >> size1 >> size2 >> size3;
+    size2_old = size2;
+    size3_old = size3;
+    size_old = size1 * size2 * size3;
+    switch(axis) {
+        case 0 :
+            size1 -= n_ref;
+            break;
+        case 1 :
+            size2 -= n_ref;
+            break;
+        case 3 :
+            size3 -= n_ref;
+            break;
+    }
+    assert((size1>0) && (size2>0) && (size3>0));
+    size = size1 * size2 * size3;
+    tab = new double[size];
+    i2 = 0;
+    for (i=0; i<size_old; ++i) {
+        assert(file);
+
+        switch(axis) {
+            case 0 :
+                itab = i / (size2_old * size3_old);  // value of first index
+                break;
+            case 1 :
+                itab = (i % (size2_old * size3_old)) / size3_old;  // value of second index
+                break;
+            case 3 :
+                itab = (i % (size2_old * size3_old)) % size3_old;  // value of third index
+                break;
+        }
+        if (mask(itab) < 0.5) file >> x;
+        else{
+            file >> tab[i2];
+            ++i2;
+        }
+    }
 }
 //==================================================================//
 Table::~Table() {
@@ -68,7 +156,7 @@ void Table::print(ostream& ost) const {
     if (size3>1) ost << size3;
     ost << " elements" << endl;
 
-    ost << setprecision(3);
+    ost << setprecision(12);
 
     if (size3 == 1) {
         for (int i=0; i<size1; i++) {
@@ -214,4 +302,16 @@ Table pow(const Table& table_in, double x) {
   Table result(s1, s2, s3);
   for (int i=0; i<size; i++) result.tab[i] = pow(table_in.tab[i], x);
   return result;
+}
+//==================================================================//
+void Table::save(const char* fname) const {
+    assert(tab != 0x0);
+
+    ofstream file(fname);
+    int size = size1*size2*size3;
+    file << size1 << ' ' << size2 << ' ' << size3 << endl;
+    file << setprecision(16) ;
+    for (int i=0; i<size; i++)
+        file << tab[i] << ' ';
+    file << endl ;
 }

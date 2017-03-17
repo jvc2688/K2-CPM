@@ -8,7 +8,9 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 
 
-dir_here = os.path.dirname(os.path.abspath(__file__))
+dir_here = os.path.abspath(__file__)
+for i in range(3):
+    dir_here = os.path.dirname(dir_here)
 
 
 class WcsFromTpf(object):
