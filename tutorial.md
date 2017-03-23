@@ -45,23 +45,23 @@ channel = 49
 
 wcs = wcsfromtpf.WcsFromTpf(channel, campaign)
 nearest_pixel = wcs.get_nearest_pixel_radec(ra, dec)
-(pix_x, pix_y, _, _, epic_id, distance) = nearest_pixel
+(pix_x, pix_y, _, _, epic_id, separation) = nearest_pixel
 
-msg = "pix_x = {:}\npix_y = {:}\nepic_id = {:}\ndistance = {:.1f} arcsec"
-print(msg.format(pix_x, pix_y, epic_id, distance.value))
+msg = "pix_x = {:}\npix_y = {:}\nepic_id = {:}\nseparation = {:.1f} arcsec"
+print(msg.format(pix_x, pix_y, epic_id, separation.value))
 ```
 ```
 pix_x = 119
 pix_y = 1022
 epic_id = 200070511
-distance = 1.8 arcsec
+separation = 1.8 arcsec
 ```
 
 Opps, I'm not sure what x and y mean here. 
 Kepler and K2 documents don't use (x,y) they use (column,row) or (row,column). 
 Here x runs from 13 to 1112, and y runs from 21 to 1044 
 (__the format of coordinates has to be strictly specified__). Fortunately, the 
-distance given above is < 4 arcsec, so the coordiantes are from the right 
+separation given above is < 4 arcsec, so the coordiantes are from the right 
 channel. 
 
 We know which pixel we're interested in so now its time to prepare predictor matix:
@@ -81,7 +81,7 @@ pixel_list = np.array([[pix_y, pix_x]])
 
 (predictor_matrix_list, predictor_epoch_masks) = run_cpm_part1(
 		int(epic_id), campaign, n_predictor, n_pca, distance, exclusion, 
-        flux_lim, tpf_dir, pixel_list, return_predictor_epoch_masks=True)
+		flux_lim, tpf_dir, pixel_list, return_predictor_epoch_masks=True)
 
 stem = "{:}_{:}_{:}_{:}".format(campaign, channel, pix_y, pix_x)
 np.savetxt(stem+"_predictor_epoch_mask.dat", predictor_epoch_masks[0], fmt='%r')
