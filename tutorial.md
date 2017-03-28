@@ -3,11 +3,13 @@
 
 I'll show you how we can extract CPM photometry of K2 Campaign 9 data. 
 Note that after downloading K2-CPM you have to add source directory to 
-your `PYTHONPATH`, e.g.,
+your `PYTHONPATH`, e.g., (for tcsh and bash, respectively):
 ```
 setenv PYTHONPATH $PYTHONPATH\:/PATH_TO_K2-CPM/source
 ```
-
+```
+export PYTHONPATH=$PYTHONPATH:/PATH_TO_K2-CPM/source
+```
 I'm marking in __bold__ the parts that require immediate attention. 
 
 ### CPM\_PART1
@@ -137,14 +139,16 @@ Next step is just running the cpm\_part2:
 
 ```python
 l2 = 1000.
-res = cpm_part2.cpm_part2(tpf_time, tpf_flux, tpf_flux_err, epoch_mask, predictor_matrix, l2)
+result = cpm_part2.cpm_part2(tpf_time, tpf_flux, tpf_flux_err, epoch_mask, predictor_matrix, l2)
 ```
 
-At this point tuple ```res``` contains: 
+At this point tuple ```result``` contains: 
 
 1. solution of the linear equations system,
 2. predicted flux for the target pixel,
 3. difference flux, i.e., the signal we're interested in (as long as model magnification curve is not provided),
 4. time vector.
+
+If you want to plot the light curve use ```result[2]``` vs. ```result[3]```
 
 (C) Radek Poleski March 2017
