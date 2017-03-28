@@ -79,12 +79,11 @@ flux_lim = (0.1, 2.0)
 tpf_dir = 'tpf/'
 pixel_list = np.array([[pix_y, pix_x]])
 
-(predictor_matrix_list, predictor_epoch_masks) = run_cpm_part1(
+predictor_matrix_list = run_cpm_part1(
 		int(epic_id), campaign, n_predictor, n_pca, distance, exclusion, 
-		flux_lim, tpf_dir, pixel_list, return_predictor_epoch_masks=True)
+		flux_lim, tpf_dir, pixel_list)
 
 stem = "{:}_{:}_{:}_{:}".format(campaign, channel, pix_y, pix_x)
-np.savetxt(stem+"_predictor_epoch_mask.dat", predictor_epoch_masks[0], fmt='%r')
 matrix_xy.save_matrix_xy(predictor_matrix_list[0], stem+"_pre_matrix_xy.dat")
 ```
 
@@ -108,16 +107,13 @@ tpf.save_pixel_curve_with_err(pixel_list[0][0], pixel_list[0][1], file_name=stem
 np.savetxt(stem+"_epoch_mask.dat", tpf.epoch_mask, fmt='%r')
 ```
 
-At this point you should have 4 files saved:
+At this point you should have three files saved:
 ```
 91_49_1022_119_epoch_mask.dat
 91_49_1022_119_pixel_flux.dat
-91_49_1022_119_predictor_epoch_mask.dat
 91_49_1022_119_pre_matrix_xy.dat
 ```
-In most cases \*\_epoch\_mask.dat and \*\_predictor\_epoch\_mask.dat will be the same, 
-but this is not guaranteed. The largest file is \*\_predictor\_epoch\_mask.dat and 
-its size depends on n\_predictor.
+The largest file is \*\_pre\_matrix\_xy.dat and its size depends on n\_predictor.
 
 You may exit python shell at this point.
 
@@ -134,7 +130,6 @@ stem = "91_49_1022_119"
 
 predictor_matrix = matrix_xy.load_matrix_xy(stem+"_pre_matrix_xy.dat")
 epoch_mask = cpm_part2.read_true_false_file(stem+"_epoch_mask.dat")
-predictor_epoch_mask = cpm_part2.read_true_false_file(stem+"_predictor_epoch_mask.dat")
 (tpf_time, tpf_flux, tpf_flux_err) = np.loadtxt(stem+"_pixel_flux.dat", unpack=True)
 ```
 
@@ -144,9 +139,6 @@ Next step is just running the cpm\_part2:
 l2 = 1000.
 res = cpm_part2.cpm_part2(tpf_time, tpf_flux, tpf_flux_err, epoch_mask, predictor_matrix, l2)
 ```
-
-Now I see that cpm\_part2 in fact does not use predictor\_epoch\_mask -- 
-__this should be corrected__. BTW, this is thanks to a recent change. 
 
 At this point tuple ```res``` contains: 
 
