@@ -72,7 +72,7 @@ Opps, I'm not sure what x and y mean here.
 Kepler and K2 documents don't use (x,y) they use (column,row) or (row,column). 
 Here x runs from 13 to 1112, and y runs from 21 to 1044 
 (__the format of coordinates has to be strictly specified__). Fortunately, the 
-separation given above is < 4 arcsec, so the coordiantes are from the right 
+separation given above is < 4 arcsec, so the coordinates are from the right 
 channel. 
 
 We know which pixel we're interested in so now its time to prepare predictor matix. Note that first time you run this code for given ```epic_id``` and ```campaign```, it will take some time to download the data. Run:
@@ -157,5 +157,16 @@ At this point tuple ```result``` contains:
 
 If you want to plot the light curve use ```result[2]``` vs. ```result[3]```. 
 You should see a binary lens light curve that peaks at HJD = 2457548.6.
+
+The cpm_part2() call presented above uses the model that is trained on all 
+the data. For the events with signal in well defined window (for ob161043 
+it is from 2457447 to 2457550) one can limit the training to the epochs 
+otside given range. This can be achieved by providing train_lim keyword 
+with a list that has the two limiting values e.g.:
+
+```python
+result = cpm_part2.cpm_part2(tpf_time, tpf_flux, tpf_flux_err, epoch_mask, predictor_matrix, l2, train_lim = [2457447., 2457550.])
+```
+
 
 (C) Radek Poleski March 2017
