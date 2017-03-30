@@ -15,11 +15,19 @@ def get_tpfs(ra,dec,r,camp, channel):
     r_list = [int(d['K2 ID']) for d in result]
     return list(set(r_list))
 
+def file_name_for_epic(epic_id, campaign):
+    """give name of file for given epic_id and campaign (91 or 92)"""
+    return 'ktwo{0:d}-c{1:d}_lpd-targ.fits.gz'.format(epic_id, campaign)
+    
+def path_for_epic(directory, epic_id, campaign):
+    """return path to file with TPF file of given EPIC ID and campaign"""
+    file_name = file_name_for_epic(epic_id, campaign)
+    return os.path.join(directory, file_name)
+
 def load_tpf(ID, camp, dire):
     """check if the TPF file exists and download it if not"""
     ID = int(ID)
-    file_name = 'ktwo{0:d}-c{1:d}_lpd-targ.fits.gz'.format(ID, camp)
-    destination = os.path.join(dire, file_name)
+    destination = path_for_epic(dire, ID, camp)
     if os.path.isfile(destination): # If the files is there, then there is nothing else to do, otherwise we need to download the data.
         return    
         

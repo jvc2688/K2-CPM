@@ -77,7 +77,7 @@ class TpfData(object):
         """path to the TPF file"""
         if TpfData.directory is None:
             raise ValueError("TpfData.directory value not set")
-        return TpfData.directory + '/' + self.file_name
+        return os.path.join(TpfData.directory, self.file_name)
 
     def verify_and_download(self):
         """check if file is where it should and download if not"""
