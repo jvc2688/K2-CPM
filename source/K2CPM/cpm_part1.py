@@ -20,7 +20,11 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
     if pixel_list is not None:
         if pixel_list.shape[0] != 1 and output_file is not None:
             raise ValueError('\n\nCurrently we can deal with only a single pixel at a time if the output file is specified')
-        
+
+    flux_lim_step_down = 0.1
+    flux_lim_step_up = 0.1
+    min_flux_lim = 0.1
+
     epic.load_tpf(target_epic_num, camp, input_dir)
     file_name = epic.path_for_epic(input_dir, target_epic_num, camp)
     tpf = k2cpm.Tpf(file_name)
@@ -69,13 +73,13 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                 epic_list_new = set(epic.get_tpfs(ra,dec,r,camp, tpf.channel))
                 more = epic_list_new.difference(epic_list)
                 if len(more) == 0:
-                    low_lim = flux_lim[0]-0.1
-                    up_lim = flux_lim[1]+0.1
+                    low_lim = flux_lim[0] - flux_lim_step_down
+                    up_lim = flux_lim[1] + flux_lim_step_up
                     while predictor_matrix.shape[1]<num_predictor:
                         old_num = predictor_matrix.shape[1]
                         predictor_matrix, _ = tpf.get_predictor_matrix(x, y, num_predictor, dis=dis, excl=excl, flux_lim=(low_lim,up_lim), tpfs=tpfs, var_mask=None)
-                        low_lim = np.max(low_lim-0.1,0.1)
-                        up_lim = up_lim+0.1
+                        low_lim = np.max(low_lim-flux_lim_step_down, min_flux_lim)
+                        up_lim = up_lim + flux_lim_step_up
                         difference = predictor_matrix.shape[1] - old_num
                         if difference == 0:
                             print('no more pixel at all')
