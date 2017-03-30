@@ -20,12 +20,11 @@ def do_test_cpm_part1_and_part2(n_test_compare,
     expect_dif = np.loadtxt(file_expect_dif)
 
     # run cpm_part1
-    (predictor_matrix_list, predictor_epoch_masks) = cpm_part1.run_cpm_part1(
+    predictor_matrix_list = cpm_part1.run_cpm_part1(
                             target_epic_num, 
                             campaign, n_predictor, n_pca, 
                             distance, exclusion, flux_lim, input_dir, 
-                            pixel_list, train_lim,
-                            return_predictor_epoch_masks=True)
+                            pixel_list, train_lim)
 
     # open TPF file to get additional information
     tpfdata.TpfData.directory = input_dir
