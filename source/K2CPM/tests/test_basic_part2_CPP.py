@@ -44,39 +44,39 @@ def single_test(ref=1, l2=1000):
     # -------------
     cmd_list = ["python", "conversion2cpp.py", "-p", "tests/intermediate/", "-r", "{:d}-".format(ref)]
     output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
-    if output!="": print output
+    if output!="": print(output)
 
     # Execute the C++ routine
     # -----------------------
     cmd_list = ["./libcpm", "tests/intermediate/", "{:d}-".format(ref), "{:.1f}".format(l2)]
     output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
-    if output != "": print output
+    if output != "": print(output)
 
     # Move the output files
     # ---------------------
     cmd_list = ["mv", "tests/intermediate/{:d}-cpmflux.dat".format(ref), "tests/output/"]
     output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
-    if output != "": print output
+    if output != "": print(output)
 
     cmd_list = ["mv", "tests/intermediate/{:d}-result.dat".format(ref), "tests/output/"]
     output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
-    if output != "": print output
+    if output != "": print(output)
 
     cmd_list = ["rm", "tests/intermediate/{:d}-epoch_mask.cpp.dat".format(ref)]
     output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
-    if output != "": print output
+    if output != "": print(output)
 
     cmd_list = ["rm", "tests/intermediate/{:d}-pixel_flux.cpp.dat".format(ref)]
     output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
-    if output != "": print output
+    if output != "": print(output)
 
     cmd_list = ["rm", "tests/intermediate/{:d}-pre_matrix_xy.cpp.dat".format(ref)]
     output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
-    if output != "": print output
+    if output != "": print(output)
 
     cmd_list = ["rm", "tests/intermediate/{:d}-predictor_epoch_mask.cpp.dat".format(ref)]
     output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
-    if output != "": print output
+    if output != "": print(output)
 
     # Change current path
     # -------------------
@@ -106,7 +106,7 @@ def single_test(ref=1, l2=1000):
     # ---------------------
     cmd_list = ["rm", "output/{:d}-cpmflux.dat".format(ref)]
     output = subprocess.Popen(cmd_list, stdout=subprocess.PIPE).communicate()[0]
-    if output != "": print output
+    if output != "": print(output)
 # --------------------------------------------------------------------
 def test_1():
     single_test(ref=1, l2=1000)
