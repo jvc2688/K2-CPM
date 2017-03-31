@@ -29,6 +29,7 @@ class TpfData(object):
         self._load_data(self._path)
         self._column = None
         self._row = None
+        self.tpfs = None # XXX
 
     def _guess_file_name(self):
         """guesses file name based on epic_id and campaign"""
@@ -42,15 +43,21 @@ class TpfData(object):
         self.channel = hdu_list[0].header['CHANNEL']
         self.reference_column = hdu_list[2].header['CRVAL1P']
         self.reference_row = hdu_list[2].header['CRVAL2P']
-        self.pixel_mask = hdu_list[2].data
-        self.mask = hdu_list[2].data
+        self.mask = hdu_list[2].data 
+        
+        # XXX
+        self.col = np.tile(np.arange(self.mask.shape[1], dtype=int), self.mask.shape[0]) + self.reference_column
+        self.col = self.col[self.mask.flatten()>0]
+        self.row = np.repeat(np.arange(self.mask.shape[0], dtype=int), self.mask.shape[1]) + self.reference_row
+        self.row = self.row[self.mask.flatten()>0]
+        # XXX
         
         data = hdu_list[1].data
         self.jd_short = data["time"] + 4833. # is it HJD, BJD, JD?
         self.quality_flags = data["quality"].astype(dtype=int)  
         flux = data["flux"]
         pixel_mask = np.isfinite(flux) & (flux != 0)
-        pixel_mask[:, self.pixel_mask < 1] = False
+        pixel_mask[:, self.mask < 1] = False
         self.pixel_mask = pixel_mask 
         
         quality_flags = data["quality"]
@@ -92,6 +99,33 @@ class TpfData(object):
         url_retriver = urllib.URLopener()
         url_retriver.retrieve(url_to_load, self._path)
     
+    @property
+    def reference_pixel(self):
+        """return array that gives reference pixel position"""
+        return np.array([self.reference_column, self.reference_row])
+
+    @property
+    def pixel_list(self):
+        """return array with a list of all pixels"""
+        shape = self.pixel_mask.shape
+        inside_coords = [np.repeat(np.arange(shape[0]), shape[1]), np.tile(np.arange(shape[1]), shape[0])]
+        return np.array(inside_coords, dtype=int).T + tpf_data.reference_pixel
+
+    def check_pixel_in_tpf(self, column, row):
+        """check if given (column,row) pixel is inside the area covered by this TPF file"""
+        d_column = column - self.reference_column
+        d_row = row - self.reference_row
+        if (d_column < 0) or (d_column >= self.mask.shape[0]):
+            return False
+        if (d_row < 0) or (d_row >= self.mask.shape[1]):
+            return False
+        return True
+
+    def check_pixel_covered(self, column, row):
+        """check if we have data for given (column,row) pixel"""
+        mask_value = self.mask[row - self.reference_row, column - self.reference_column]
+        return (mask_value > 0)
+        
     def _make_column_row_vectors(self):
         """prepare vectors with some numbers"""
         self._column = np.tile(np.arange(self.mask.shape[1], dtype=int), self.mask.shape[0]) + self.reference_column
@@ -111,6 +145,14 @@ class TpfData(object):
             out = None
         return out
 
+    #def get_index(self, x, y): # XXX
+        #index = np.arange(self.row.shape[0])
+        #index_mask = ((self.row-self.reference_row)==x) & ((self.col-self.reference_column)==y)
+        #try:
+            #return index[index_mask][0]
+        #except IndexError:
+            #print("No data for ({0:d},{1:d})".format(x, y))
+
     def get_flux_for_pixel(self, row, column):
         """extracts flux for a single pixel (all epochs) specified as row and column"""
         index = self._get_pixel_index(row, column)
@@ -121,6 +163,67 @@ class TpfData(object):
         index = self._get_pixel_index(row, column)
         return self.flux_err[:,index]
     
+    
+    def get_predictor_matrix(self, target_x, target_y, num, dis=16, excl=5, flux_lim=(0.8, 1.2), tpfs=None, var_mask=None):
+        """prepare predictor matrix"""
+
+        if tpfs is None:
+            tpfs = set([self])
+        else:
+            tpfs = set(tpfs)
+            tpfs.add(self)
+
+        if self.tpfs == tpfs:
+            print('the same')
+        else:
+            print('different')
+            self.tpfs = tpfs
+            print(len(tpfs), len(self.tpfs))
+            pixel_row = []
+            pixel_col = []
+            pixel_median = []
+            pixel_flux = []
+            for tpf in tpfs:
+                if type(tpf) == TpfData:
+                    # print("THIS ONE IS SKIPPED")
+                    continue
+                pixel_row.append(tpf.row)
+                pixel_col.append(tpf.col)
+                pixel_median.append(tpf.median)
+                pixel_flux.append(tpf.flux)
+            self.pixel_row = np.concatenate(pixel_row, axis=0).astype(int)
+            self.pixel_col = np.concatenate(pixel_col, axis=0).astype(int)
+            self.pixel_median = np.concatenate(pixel_median, axis=0)
+            self.pixel_flux = np.concatenate(pixel_flux, axis=1)
+
+        # target_index = self.get_index(target_x, target_y) # XXX
+        target_index = self._get_pixel_index(target_x+self.reference_row, target_y+self.reference_column)
+        pixel_mask = np.ones_like(self.pixel_row, dtype=bool)
+
+        target_col = self.col[target_index]
+        target_row = self.row[target_index]
+        for pix in range(-excl, excl+1):
+            pixel_mask &= (self.pixel_row != (target_row+pix))
+            pixel_mask &= (self.pixel_col != (target_col+pix))
+
+        mask_1 = (self.median[target_index]*flux_lim[0] <= self.pixel_median)
+        mask_2 = (self.median[target_index]*flux_lim[1] >= self.pixel_median)
+        pixel_mask &= (mask_1 & mask_2)
+
+        distance_row = np.square(self.pixel_row[pixel_mask]-target_row)
+        distance_col = np.square(self.pixel_col[pixel_mask]-target_col)
+        distance = distance_row + distance_col
+        dis_mask = (distance > dis**2)
+        distance = distance[dis_mask]
+
+        index = np.argsort(distance, kind="mergesort")
+
+        pixel_flux = self.pixel_flux[:,pixel_mask][:,dis_mask]
+        predictor_flux = pixel_flux[:,index[:num]].astype(float)
+
+        return predictor_flux
+
+
     def save_pixel_curve(self, row, column, file_name, full_time=True):
         """saves the time vector and the flux for a single pixel into a file"""
         flux = self.get_flux_for_pixel(row=row, column=column)

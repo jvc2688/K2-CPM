@@ -16,7 +16,8 @@ class MultipleTpf(object):
     def add_tpf_data(self, tpf_data):
         """add one more instance of TpfData"""
         if not isinstance(tpf_data, tpfdata.TpfData):
-            raise ValueError('Ooops... MultipleTpf.add_tpf_data() requires input that is an instance of TpfData class')
+            msg = 'Ooops... MultipleTpf.add_tpf_data() requires input that is an instance of TpfData class'
+            raise ValueError(msg)
         if tpf_data.epic_id in self._epic_ids:
             return
         if self._campaign is None:
