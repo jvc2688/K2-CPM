@@ -221,8 +221,8 @@ void fit_target(const Table& tpf_timeserie, Table& pre_matrix2,
     }
 }
 //==================================================================//
-void get_fit_matrix_ffi(const Table& pre_matrix, const int n_dates,
-    const int n_pre, const int poly, Table& pre_matrix2){
+void get_fit_matrix_ffi(const Table& pre_matrix, const Table& ml_model,
+    const int n_dates, const int n_pre, const int poly, Table& pre_matrix2){
 /*
     Prepare matrix to fit the fluxes.
 
@@ -230,14 +230,14 @@ void get_fit_matrix_ffi(const Table& pre_matrix, const int n_dates,
     -----
     pre_matrix -- Table &, dimension n_dates x n_pre.
         Predictors matrix, all masks already applied.
+    ml_model -- Table &, dimension n_dates.
+        Microlensing magnification.
     n_dates -- strictly positive integer.
         Number of dates.
     n_pre -- strictly positive integer.
         Number of predictors.
     poly -- strictly positive integer.
         Order of polynomials on time to be added.
-    ml -- ?
-        *** Microlensing model to be added. ***
     pre_matrix2 -- Table &, dimension n_dates x (n_pre + poly + 1).
         Same as pre_matrix with polynomial terms.
 */
@@ -245,16 +245,14 @@ void get_fit_matrix_ffi(const Table& pre_matrix, const int n_dates,
     // Add polynomial terms
     // --------------------
     // Concatenate with the Vandermonde matrix
-    int n_pre2 = n_pre + poly + 1;
+    int n_pre2 = n_pre + poly + 1 + 1;  // Last +1 for ml model
     for(int i=0; i<n_dates; ++i) {
         for(int j=0; j<n_pre2; ++j){
             if (j<n_pre) pre_matrix2.set(i, j) = pre_matrix(i, j);
             if ((j>=n_pre) && (j<n_pre2)) pre_matrix2.set(i, j) = pow(i, j-n_pre);
-            // if (j==n_pred+poly+1) pre_matrix2.set(i, j) = ml(i);
+            if (j==n_pre2) pre_matrix2.set(i, j) = ml_model(i);
         }
     }
-
-    // ************ !!! ADD HERE CONCATENATION WITH microlensing model !!! ************
 }
 //==================================================================//
 void cpm_part2(string path_input, string prefix, double l2){
@@ -282,7 +280,7 @@ void cpm_part2(string path_input, string prefix, double l2){
     epoch_mask_fname = auxstring + "epoch_mask.cpp.dat";
     pre_matrix_fname = auxstring + "pre_matrix_xy.cpp.dat";
     pre_epoch_mask_fname = auxstring + "predictor_epoch_mask.cpp.dat";
-    ml_model_fname = auxstring + "time_magnification.cpp.dat";
+    ml_model_fname = auxstring + "magnification_ml.dat";
     result_fname = auxstring + "result.dat";
     predicted_flux_fname = auxstring + "_predicted_flux.dat";
     cpmflux_fname = auxstring + "cpmflux.dat";
@@ -298,15 +296,22 @@ void cpm_part2(string path_input, string prefix, double l2){
     n_pre_dates = pre_matrix.get_size1();
     n_pre = pre_matrix.get_size2();
 
+    Table ml_model(n_pre_dates);
+    ifstream ml_model_file (ml_model_fname);
+    for (i=0; i<n_pre_dates; ++i){
+        ml_model_file >> x;
+        ml_model.set(i) = x;
+    }
+    ml_model_file.close();
+
     // Calculations
     // ------------
-    n_pre2 = n_pre + poly + 1;
-    // n_pred_poly = n_pred + poly + 1 + 1;  // +1 for polynomial +1 for microlensing model
+    n_pre2 = n_pre + poly + 1 + 1;  // +1 for polynomial +1 for microlensing model
 
     // Add polynomial terms to predictor matrix
     Table pre_matrix2(n_dates, n_pre2);
     assert(poly >= 0);
-    get_fit_matrix_ffi(pre_matrix, n_dates, n_pre, poly, pre_matrix2);
+    get_fit_matrix_ffi(pre_matrix, ml_model, n_dates, n_pre, poly, pre_matrix2);
 
     // Prepare regularization
     Table l2_tab(n_pre2);
