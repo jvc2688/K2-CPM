@@ -177,12 +177,14 @@ if (__name__ == "__main__"):
     file.close()
 
     if (options['ref'] != ""):
-        fname = options['path'] + options['ref'] + "epoch_mask.dat"
+        fname = options['path'] + options['ref'] + "*epoch_mask.dat"
         if not os.path.exists(fname):
             text = "File not found:\n{:s}".format(fname)
             sys.exit(text)
     else:
-        fname = glob.glob(options['path'] + "*[!predictor_]epoch_mask.dat")
+        fname = np.array(glob.glob(options['path'] + "*epoch_mask.dat"))
+        fname_no = np.array(glob.glob(options['path'] + "*predictor_epoch_mask.dat"))
+        fname = [a for a in fname if len(np.where(a == np.intersect1d(fname, fname_no))[0]) == 0]
         if len(fname) > 1:
             text = "Several files with different references are found."
             text += "\nPlease use the option -r to give the reference."
