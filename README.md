@@ -93,6 +93,8 @@ where `path-inputoutput/` is the path you are running the
 
 ### Part 2
 
+#### Without microlensing model
+
 Then, the second part of the CPM will be run in C++. Once compiled,
 the C++ version can be run directly, e.g. as follow,
 ```
@@ -104,7 +106,7 @@ where `path-to-main-directory` is the full path to the directory
 CPM_PART1 (see `tutorial.md`), `reference` is the content of the
 variable `stem` from CPM_PART1 (see `tutorial.md`), including `_` at the end (if 
 stem is `91_49_1022_119`, the reference is `91_49_1022_119_`) and `l2` is the
-regularization strengh (e.g. 1000).`
+regularization strengh (e.g. 1000).
 
 The above command run calculations and write the results is two files,
 in the directory path-inputoutput/:
@@ -114,7 +116,25 @@ in the directory path-inputoutput/:
 * `reference_cpmflux.dat`: the first column is the date, the second is
 the target flux prediction,  the third is the difference flux.
 
-## Future developments
+#### Include a microlensing model (still beta version)
 
-* A version that can be used directly from a modeling code.
-* C++ version that can be used as a shared library (from C, C++ and fortran).
+The current version may be used from a microlensing modeling
+code. Only the *Part 2* may be affected by a microlensing model. 
+
+For now, several files are used to interact with a modeling code. For
+every position in the parameter space, a new file must be created in
+the same directory we have run the *Part 1*. If we come back to the
+above example, the magnification at each epoch of the file
+`91_49_1022_119_epochs_ml.dat` should be computed and saved in a new
+file called `91_49_1022_119_magnification_ml.dat`. This file should
+have the same number of lines than `91_49_1022_119_epochs_ml.dat` and
+only one column, corresponding to the value of the magnification at
+the  given epoch.
+
+Also, it is necessary to say that we want to use a microlensing model to the
+CPM Part 2. For that, the C++ code should be run as follow:
+```
+$ ./libcpm path-inputoutput/ reference l2 1
+```
+where the last integer `1` is a flag that makes the code to load the
+magnification at each epoch.
