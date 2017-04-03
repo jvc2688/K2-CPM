@@ -123,7 +123,7 @@ code. Only the *Part 2* may be affected by a microlensing model.
 
 For now, several files are used to interact with a modeling code. For
 every position in the parameter space, a new file must be created in
-the same directory we have run the *Part 1*. If we come back to the
+the same directory we have run the *Part 1* (`path-inputoutput/`). If we come back to the
 above example, the magnification at each epoch of the file
 `91_49_1022_119_epochs_ml.dat` should be computed and saved in a new
 file called `91_49_1022_119_magnification_ml.dat`. This file should
