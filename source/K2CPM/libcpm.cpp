@@ -221,6 +221,37 @@ void fit_target(const Table& tpf_timeserie, Table& pre_matrix2,
     }
 }
 //==================================================================//
+void get_fit_matrix_ffi(const Table& pre_matrix, const int n_dates,
+    const int n_pre, const int poly, Table& pre_matrix2){
+/*
+    Prepare matrix to fit the fluxes.
+
+    Input
+    -----
+    pre_matrix -- Table &, dimension n_dates x n_pre.
+        Predictors matrix, all masks already applied.
+    n_dates -- strictly positive integer.
+        Number of dates.
+    n_pre -- strictly positive integer.
+        Number of predictors.
+    poly -- strictly positive integer.
+        Order of polynomials on time to be added.
+    pre_matrix2 -- Table &, dimension n_dates x (n_pre + poly + 1).
+        Same as pre_matrix with polynomial terms.
+*/
+
+    // Add polynomial terms
+    // --------------------
+    // Concatenate with the Vandermonde matrix
+    int n_pre2 = n_pre + poly + 1;  // Last +1 for ml model
+    for(int i=0; i<n_dates; ++i) {
+        for(int j=0; j<n_pre2; ++j){
+            if (j<n_pre) pre_matrix2.set(i, j) = pre_matrix(i, j);
+            if ((j>=n_pre) && (j<n_pre2)) pre_matrix2.set(i, j) = pow(i, j-n_pre);
+        }
+    }
+}
+//==================================================================//
 void get_fit_matrix_ffi(const Table& pre_matrix, const Table& ml_model,
     const int n_dates, const int n_pre, const int poly, Table& pre_matrix2){
 /*
@@ -255,7 +286,7 @@ void get_fit_matrix_ffi(const Table& pre_matrix, const Table& ml_model,
     }
 }
 //==================================================================//
-void cpm_part2(string path_input, string prefix, double l2){
+void cpm_part2(string path_input, string prefix, double l2, int flg_ml){
 
     // Declaration and initialisations
     // -------------------------------
@@ -266,7 +297,7 @@ void cpm_part2(string path_input, string prefix, double l2){
     double train_lim[2];
     string pixel_flux_fname, epoch_mask_fname, pre_matrix_fname;
     string pre_epoch_mask_fname, ml_model_fname, result_fname, cpmflux_fname;
-    string predicted_flux_fname;
+    string predicted_flux_fname, chi2_fname;
 
     string line, last_line, lastline, delimiter, auxstring;
 
@@ -284,6 +315,7 @@ void cpm_part2(string path_input, string prefix, double l2){
     result_fname = auxstring + "result.dat";
     predicted_flux_fname = auxstring + "_predicted_flux.dat";
     cpmflux_fname = auxstring + "cpmflux.dat";
+    chi2_fname = auxstring + "chi2.dat";
 
     // Load TPF data
     // -------------
@@ -296,22 +328,33 @@ void cpm_part2(string path_input, string prefix, double l2){
     n_pre_dates = pre_matrix.get_size1();
     n_pre = pre_matrix.get_size2();
 
+    // Load microlensing model
+    // -----------------------
     Table ml_model(n_pre_dates);
-    ifstream ml_model_file (ml_model_fname);
-    for (i=0; i<n_pre_dates; ++i){
-        ml_model_file >> x;
-        ml_model.set(i) = x;
+    if (flg_ml){
+        ifstream ml_model_file (ml_model_fname);
+        assert(ml_model_file);
+        for (i=0; i<n_pre_dates; ++i){
+            ml_model_file >> x;
+            ml_model.set(i) = x;
+        }
+        ml_model_file.close();
     }
-    ml_model_file.close();
 
     // Calculations
     // ------------
-    n_pre2 = n_pre + poly + 1 + 1;  // +1 for polynomial +1 for microlensing model
+    if (flg_ml) n_pre2 = n_pre + poly + 1 + 1;  // +1 for polynomial +1 for microlensing model
+    else n_pre2 = n_pre + poly + 1;
 
     // Add polynomial terms to predictor matrix
     Table pre_matrix2(n_dates, n_pre2);
     assert(poly >= 0);
-    get_fit_matrix_ffi(pre_matrix, ml_model, n_dates, n_pre, poly, pre_matrix2);
+    if (flg_ml){
+        get_fit_matrix_ffi(pre_matrix, ml_model, n_dates, n_pre, poly, pre_matrix2);
+    }
+    else {
+        get_fit_matrix_ffi(pre_matrix, n_dates, n_pre, poly, pre_matrix2);
+    }
 
     // Prepare regularization
     Table l2_tab(n_pre2);
@@ -354,6 +397,20 @@ void cpm_part2(string path_input, string prefix, double l2){
     }
     else cout << "Unable to open file";
 
+    if (flg_ml){
+        double chi2 = 0;
+        for (i=0; i<n_dates; ++i) {
+            chi2 += pow(dif(i) / tpf_timeserie(i, 2), 2);
+        }
+        ofstream chi2_file (chi2_fname);
+        if (chi2_file.is_open()){
+            chi2_file << fixed << setprecision(8);
+            chi2_file << chi2 << endl;
+            chi2_file.close();
+        }
+        else cout << "Unable to open file";
+    }
+
     // Release memory
     // --------------
     delete[] epoch_mask;
@@ -363,19 +420,24 @@ int main(int argc, char* argv[]) {
 
     // Declarations
     // ------------
+    int flg_ml = 0;
     double l2;
     string path_input, prefix;
 
     // Check command line options
     // --------------------------
-    assert(argc == 4);
+    assert((argc == 4) || (argc == 5));
 
     // Run CPM part 2
     // --------------
     path_input = argv[1];
     prefix = argv[2];
     l2 = atof(argv[3]);
-    cpm_part2(path_input, prefix, l2);
+    if(argc==5) {
+        flg_ml = stoi(argv[4]);
+        assert((flg_ml == 0) || (flg_ml == 1));
+    }
+    cpm_part2(path_input, prefix, l2, flg_ml);
 
     return 0;
 }
