@@ -104,6 +104,8 @@ if (__name__ == "__main__"):
     fullfile = fullfile.upper()
     fullfile = fullfile.replace('TRUE', '1')
     fullfile = fullfile.replace('FALSE', '0')
+    pre_epoch_mask = np.array(fullfile.replace('\n', '').split(' '))
+    pre_epoch_mask = pre_epoch_mask.astype(np.int)
     fullfile = "{:d} 1 1\n".format(nb_line) + fullfile + "\n"
     fname = fname[:-3] + "cpp.dat"
     file = open(fname, 'w')
@@ -168,6 +170,7 @@ if (__name__ == "__main__"):
         fullfile += line
         nb_line = nb_line + 1
     file.close()
+    epochs = [a.split(' ')[0] for a in fullfile.split('\n') if a != '']
     fullfile = fullfile.replace('\n', ' ')
     if fullfile[-1]==' ': fullfile = fullfile[:-1]
     fullfile = "{:d} 3 1\n".format(nb_line) + fullfile + "\n"
@@ -175,6 +178,14 @@ if (__name__ == "__main__"):
     file = open(fname, 'w')
     file.write(fullfile)
     file.close()
+
+    epochs = np.array([epochs[i] for i in xrange(len(epochs)) if pre_epoch_mask[i]])
+    if fname[-1] == "/": fname = fname[:-1]
+    fname = fname.split("/")[-1]
+    fname = fname.split("pixel_flux.cpp.dat")[0]
+    fname += "epochs_ml.dat"
+    fname = options['path'] + fname
+    np.savetxt(fname, epochs, fmt='%s')
 
     if (options['ref'] != ""):
         fname = options['path'] + options['ref'] + "*epoch_mask.dat"
