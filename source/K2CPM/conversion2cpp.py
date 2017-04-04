@@ -188,7 +188,7 @@ if (__name__ == "__main__"):
     np.savetxt(fname, epochs, fmt='%s')
 
     if (options['ref'] != ""):
-        fname = options['path'] + options['ref'] + "*epoch_mask.dat"
+        fname = options['path'] + options['ref'] + "epoch_mask.dat"
         if not os.path.exists(fname):
             text = "File not found:\n{:s}".format(fname)
             sys.exit(text)
