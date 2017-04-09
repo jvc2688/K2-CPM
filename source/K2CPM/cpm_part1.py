@@ -6,10 +6,7 @@ from sklearn.decomposition import PCA
 import argparse
 
 from K2CPM import k2_cpm as k2cpm
-from K2CPM import epic
-from K2CPM import matrix_xy
-from K2CPM import multipletpf
-from K2CPM import tpfdata
+from K2CPM import epic, matrix_xy, multipletpf, tpfdata
 
 
 def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl, 
@@ -23,9 +20,13 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
     if pixel_list is not None:
         if pixel_list.shape[0] != 1 and output_file is not None:
             raise ValueError('\n\nCurrently we can deal with only a single pixel at a time if the output file is specified')
-        
+
+    flux_lim_step_down = 0.1
+    flux_lim_step_up = 0.1
+    min_flux_lim = 0.1
+
     epic.load_tpf(target_epic_num, camp, input_dir)
-    file_name = input_dir+'/'+'ktwo{0:d}-c{1:d}_lpd-targ.fits.gz'.format(target_epic_num, camp)
+    file_name = epic.path_for_epic(input_dir, target_epic_num, camp)
     tpf = k2cpm.Tpf(file_name)
     shape = tpf.kplr_mask.shape
     ra = tpf.ra
@@ -41,12 +42,13 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
         if epic_num == 200070874 or epic_num == 200070438:
             continue
         epic.load_tpf(int(epic_num), camp, input_dir)
+        tpf_file_name = epic.path_for_epic(input_dir, epic_num, camp)
         try:
-            tpfs.append(k2cpm.Tpf(input_dir+'/'+'ktwo{0}-c{1}_lpd-targ.fits.gz'.format(int(epic_num), camp)))
+            tpfs.append(k2cpm.Tpf(tpf_file_name))
         except IOError:
-            os.remove(input_dir+'/'+'ktwo{0}-c{1}_lpd-targ.fits.gz'.format(int(epic_num), camp))
+            os.remove(tpf_file_name)
             epic.load_tpf(int(epic_num), camp, input_dir)
-            tpfs.append(k2cpm.Tpf(input_dir+'/'+'ktwo{0}-c{1}_lpd-targ.fits.gz'.format(int(epic_num), camp)))
+            tpfs.append(k2cpm.Tpf(tpf_file_name))
 
     if pixel_list is None:
         print('no pixel list, run cpm on full tpf')
@@ -71,13 +73,13 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                 epic_list_new = set(epic.get_tpfs(ra,dec,r,camp, tpf.channel))
                 more = epic_list_new.difference(epic_list)
                 if len(more) == 0:
-                    low_lim = flux_lim[0]-0.1
-                    up_lim = flux_lim[1]+0.1
+                    low_lim = flux_lim[0] - flux_lim_step_down
+                    up_lim = flux_lim[1] + flux_lim_step_up
                     while predictor_matrix.shape[1]<num_predictor:
                         old_num = predictor_matrix.shape[1]
                         predictor_matrix, _ = tpf.get_predictor_matrix(x, y, num_predictor, dis=dis, excl=excl, flux_lim=(low_lim,up_lim), tpfs=tpfs, var_mask=None)
-                        low_lim = np.max(low_lim-0.1,0.1)
-                        up_lim = up_lim+0.1
+                        low_lim = np.max(low_lim-flux_lim_step_down, min_flux_lim)
+                        up_lim = up_lim + flux_lim_step_up
                         difference = predictor_matrix.shape[1] - old_num
                         if difference == 0:
                             print('no more pixel at all')
@@ -89,7 +91,7 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                             continue
                         epic.load_tpf(int(epic_num), camp, input_dir)
                         print(epic_num)
-                        tpfs.append(k2cpm.Tpf(input_dir+'/'+'ktwo{0:d}-c{1:d}_lpd-targ.fits.gz'.format(int(epic_num), camp)))
+                        tpfs.append(k2cpm.Tpf(epic.path_for_epic(input_dir, epic_num, camp)))
                     predictor_matrix, _ = tpf.get_predictor_matrix(x, y, num_predictor, dis=dis, excl=excl, flux_lim=flux_lim, tpfs=tpfs, var_mask=None)
                     print(predictor_matrix.shape)
                     epic_list = epic_list_new
