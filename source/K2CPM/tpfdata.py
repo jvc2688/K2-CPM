@@ -45,12 +45,10 @@ class TpfData(object):
         self.reference_row = hdu_list[2].header['CRVAL2P']
         self.mask = hdu_list[2].data 
         
-        # XXX
-        self.col = np.tile(np.arange(self.mask.shape[1], dtype=int), self.mask.shape[0]) + self.reference_column
-        self.col = self.col[self.mask.flatten()>0]
-        self.row = np.repeat(np.arange(self.mask.shape[0], dtype=int), self.mask.shape[1]) + self.reference_row
-        self.row = self.row[self.mask.flatten()>0]
-        # XXX
+        self.colums = np.tile(np.arange(self.mask.shape[1], dtype=int), self.mask.shape[0]) + self.reference_column
+        self.colums = self.columns[self.mask.flatten()>0]
+        self.rows = np.repeat(np.arange(self.mask.shape[0], dtype=int), self.mask.shape[1]) + self.reference_row
+        self.rows = self.rows[self.mask.flatten()>0]
         
         data = hdu_list[1].data
         self.jd_short = data["time"] + 4833. # is it HJD, BJD, JD?
@@ -145,14 +143,6 @@ class TpfData(object):
             out = None
         return out
 
-    #def get_index(self, x, y): # XXX
-        #index = np.arange(self.row.shape[0])
-        #index_mask = ((self.row-self.reference_row)==x) & ((self.col-self.reference_column)==y)
-        #try:
-            #return index[index_mask][0]
-        #except IndexError:
-            #print("No data for ({0:d},{1:d})".format(x, y))
-
     def get_flux_for_pixel(self, row, column):
         """extracts flux for a single pixel (all epochs) specified as row and column"""
         index = self._get_pixel_index(row, column)
@@ -167,28 +157,18 @@ class TpfData(object):
     def get_predictor_matrix(self, target_x, target_y, num, dis=16, excl=5, flux_lim=(0.8, 1.2), tpfs=None, var_mask=None):
         """prepare predictor matrix"""
 
-        if tpfs is None:
-            tpfs = set([self])
-        else:
-            tpfs = set(tpfs)
-            tpfs.add(self)
-
         if self.tpfs == tpfs:
             print('the same')
         else:
             print('different')
             self.tpfs = tpfs
-            print(len(tpfs), len(self.tpfs))
             pixel_row = []
             pixel_col = []
             pixel_median = []
             pixel_flux = []
             for tpf in tpfs:
-                if type(tpf) == TpfData:
-                    # print("THIS ONE IS SKIPPED")
-                    continue
-                pixel_row.append(tpf.row)
-                pixel_col.append(tpf.col)
+                pixel_row.append(tpf.rows)
+                pixel_col.append(tpf.columns)
                 pixel_median.append(tpf.median)
                 pixel_flux.append(tpf.flux)
             self.pixel_row = np.concatenate(pixel_row, axis=0).astype(int)
@@ -196,12 +176,11 @@ class TpfData(object):
             self.pixel_median = np.concatenate(pixel_median, axis=0)
             self.pixel_flux = np.concatenate(pixel_flux, axis=1)
 
-        # target_index = self.get_index(target_x, target_y) # XXX
-        target_index = self._get_pixel_index(target_x+self.reference_row, target_y+self.reference_column)
+        target_index = self._get_pixel_index(target_x, target_y)
         pixel_mask = np.ones_like(self.pixel_row, dtype=bool)
 
-        target_col = self.col[target_index]
-        target_row = self.row[target_index]
+        target_col = self.columns[target_index]
+        target_row = self.rows[target_index]
         for pix in range(-excl, excl+1):
             pixel_mask &= (self.pixel_row != (target_row+pix))
             pixel_mask &= (self.pixel_col != (target_col+pix))
@@ -210,19 +189,18 @@ class TpfData(object):
         mask_2 = (self.median[target_index]*flux_lim[1] >= self.pixel_median)
         pixel_mask &= (mask_1 & mask_2)
 
-        distance_row = np.square(self.pixel_row[pixel_mask]-target_row)
-        distance_col = np.square(self.pixel_col[pixel_mask]-target_col)
-        distance = distance_row + distance_col
-        dis_mask = (distance > dis**2)
-        distance = distance[dis_mask]
+        distance2_row = np.square(self.pixel_row[pixel_mask]-target_row)
+        distance2_col = np.square(self.pixel_col[pixel_mask]-target_col)
+        distance2 = distance2_row + distance2_col
+        dis_mask = (distance2 > dis**2)
+        distance2 = distance2[dis_mask]
 
-        index = np.argsort(distance, kind="mergesort")
+        index = np.argsort(distance2, kind="mergesort")
 
         pixel_flux = self.pixel_flux[:,pixel_mask][:,dis_mask]
         predictor_flux = pixel_flux[:,index[:num]].astype(float)
 
         return predictor_flux
-
 
     def save_pixel_curve(self, row, column, file_name, full_time=True):
         """saves the time vector and the flux for a single pixel into a file"""

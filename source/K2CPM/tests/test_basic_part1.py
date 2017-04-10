@@ -1,3 +1,4 @@
+import os
 import numpy as np
 
 from K2CPM import cpm_part1
@@ -13,6 +14,8 @@ def do_test_cpm_part1(n_test, target_epic_num=200071074, campaign=92,
     file_name = "{:}-pre_matrix_xy.dat".format(n_test)     
     output_file = "intermediate/" + file_name
     expected_file = "intermediate/expected/" + file_name
+    if os.path.isfile(output_file):
+        os.remove(output_file)
 
     cpm_part1.run_cpm_part1(target_epic_num, campaign, n_predictor, n_pca, 
                             distance, exclusion, flux_lim, input_dir, 
