@@ -104,7 +104,7 @@ downloaded TPF files. If you already have some of those files, then just make
 symbolic link. Note that ```pixel_list = np.array([[pix_y, pix_x]])``` reverts 
 the order of coordiantes. 
 
-At this point we have two files ready, we need two more:
+At this point we have one file ready, we need two more:
 
 ```python
 from K2CPM import tpfdata
@@ -169,4 +169,4 @@ result = cpm_part2.cpm_part2(tpf_time, tpf_flux, tpf_flux_err, epoch_mask, predi
 ```
 
 
-(C) Radek Poleski March 2017
+(C) Radek Poleski, revised April 2017
