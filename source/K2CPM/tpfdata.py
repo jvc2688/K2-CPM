@@ -45,8 +45,8 @@ class TpfData(object):
         self.reference_row = hdu_list[2].header['CRVAL2P']
         self.mask = hdu_list[2].data 
         
-        self.colums = np.tile(np.arange(self.mask.shape[1], dtype=int), self.mask.shape[0]) + self.reference_column
-        self.colums = self.columns[self.mask.flatten()>0]
+        self.columns = np.tile(np.arange(self.mask.shape[1], dtype=int), self.mask.shape[0]) + self.reference_column
+        self.columns = self.columns[self.mask.flatten()>0]
         self.rows = np.repeat(np.arange(self.mask.shape[0], dtype=int), self.mask.shape[1]) + self.reference_row
         self.rows = self.rows[self.mask.flatten()>0]
         
@@ -153,6 +153,17 @@ class TpfData(object):
         index = self._get_pixel_index(row, column)
         return self.flux_err[:,index]
     
+    def get_fluxes_for_square(self, row_center, column_center, half_size):
+        """get matrix that gives fluxes for pixels from (center-half_size) to
+        (center+half_size) in each axis and including both ends"""
+        full_size = 2 * half_size + 1
+        out = np.zeros((full_size, full_size, len(self.jd_short)))
+        for i_row in range(-half_size, half_size+1):
+            row = i_row + row_center
+            for i_column in range(-half_size, half_size+1):
+                column = i_column + column_center
+                out[i_row+half_size][i_column+half_size] = self.get_flux_for_pixel(row, column)
+        return out
     
     def get_predictor_matrix(self, target_x, target_y, num, dis=16, excl=5, flux_lim=(0.8, 1.2), tpfs=None, var_mask=None):
         """prepare predictor matrix"""
