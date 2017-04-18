@@ -216,7 +216,7 @@ class TpfData(object):
     def save_pixel_curve(self, row, column, file_name, full_time=True):
         """saves the time vector and the flux for a single pixel into a file"""
         flux = self.get_flux_for_pixel(row=row, column=column)
-        time = self.jd_short
+        time = np.copy(self.jd_short)
         if full_time:
             time += 2450000.
         np.savetxt(file_name, np.array([time, flux]).T, fmt="%.5f %.8f")
@@ -228,7 +228,7 @@ class TpfData(object):
         for a single pixel into a file"""
         flux = self.get_flux_for_pixel(row=row, column=column)
         flux_err = self.get_flux_err_for_pixel(row=row, column=column)
-        time = self.jd_short
+        time = np.copy(self.jd_short)
         if full_time:
             time += 2450000.
         np.savetxt(file_name, np.array([time, flux, flux_err]).T, 
