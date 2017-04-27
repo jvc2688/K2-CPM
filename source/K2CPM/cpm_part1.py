@@ -41,6 +41,15 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
             continue
         tpfs.append(tpfdata.TpfData(epic_id=epic_num, campaign=camp)) 
 
+    #######################################
+    from K2CPM import wcsfromtpf
+    wcs = wcsfromtpf.WcsFromTpf(tpf_data.channel, camp)
+    (epics_to_use, _, _) = wcs.get_epics_around_radec(ra, dec)
+    epics_to_use = epics_to_use[:15]
+    m_tpfs = multipletpf.MultipleTpf()
+    m_tpfs.add_tpf_data_from_epic_list(epics_to_use, camp)
+    #######################################
+
     if pixel_list is None:
         print('no pixel list, run cpm on full tpf')
         pixel_list = tpf_data.pixel_list
@@ -54,8 +63,11 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
             print('pixel out of range')
         elif tpf_data.check_pixel_covered(column=pixel[1], row=pixel[0]):
             print(len(tpfs))
-            predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl, 
-                                                        flux_lim=flux_lim, tpfs=tpfs, var_mask=None)
+            #predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl, 
+            #                                            flux_lim=flux_lim, tpfs=tpfs, var_mask=None)
+            predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl,
+                                                        flux_lim=flux_lim, tpfs=tpfs, var_mask=None,
+                                                        m_tpfs=m_tpfs, m_tpfs_list=epics_to_use)
             while predictor_matrix.shape[1]<num_predictor:
                 r += 6
                 epic_list_new = set(epic.get_tpfs(ra, dec, r, camp, tpf_data.channel))
@@ -65,8 +77,11 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                     up_lim = flux_lim[1] + flux_lim_step_up
                     while predictor_matrix.shape[1] < num_predictor:
                         old_num = predictor_matrix.shape[1]
-                        predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl, 
-                                                        flux_lim=(low_lim,up_lim), tpfs=tpfs, var_mask=None)
+                        #predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl, 
+                        #                                flux_lim=(low_lim,up_lim), tpfs=tpfs, var_mask=None)
+                        predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl,
+                                                        flux_lim=(low_lim,up_lim), tpfs=tpfs, var_mask=None,
+                                                        m_tpfs=m_tpfs, m_tpfs_list=epics_to_use)
                         low_lim = np.max(low_lim-flux_lim_step_down, min_flux_lim)
                         up_lim = up_lim + flux_lim_step_up
                         difference = predictor_matrix.shape[1] - old_num
@@ -79,10 +94,14 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                         if epic_num == 200070874 or epic_num == 200070438:
                             continue
                         print(epic_num)
-                        #tpfs.append(k2cpm.Tpf(epic.path_for_epic(input_dir, epic_num, camp)))
-                        tpfs.append(tpfdata.TpfData(epic_id=epic_num, campaign=camp))
-                    predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl, 
-                                                        flux_lim=[low_lim, up_lim], tpfs=tpfs, var_mask=None)
+                        #tpfs.append(tpfdata.TpfData(epic_id=epic_num, campaign=camp))
+                    # XXX THE ABOVE LOOP SHOULD BE SOMEHOW TRANSLATED.
+                    
+                    #predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl, 
+                    #                                    flux_lim=[low_lim, up_lim], tpfs=tpfs, var_mask=None)
+                    predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl,
+                                                        flux_lim=[low_lim, up_lim], tpfs=tpfs, var_mask=None,
+                                                        m_tpfs=m_tpfs, m_tpfs_list=epics_to_use)
                     epic_list = epic_list_new
 
             if num_pca>0:
@@ -90,12 +109,9 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                 pca.fit(predictor_matrix)
                 predictor_matrix = pca.transform(predictor_matrix)
                 
-            tpf_set = multipletpf.MultipleTpf()
-            for tpf in tpfs:
-                tpf_set.add_tpf_data(tpf)
-            out_predictor_epoch_masks.append(tpf_set.predictor_epoch_mask)
-            
-            predictor_matrix = predictor_matrix[tpf_set.predictor_epoch_mask]
+            out_predictor_epoch_masks.append(m_tpfs.predictor_epoch_mask)
+
+            predictor_matrix = predictor_matrix[m_tpfs.predictor_epoch_mask]
             out_predictor_matrixes.append(predictor_matrix)
 
             if output_file is not None: 
