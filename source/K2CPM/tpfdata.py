@@ -171,34 +171,11 @@ class TpfData(object):
                 out[i_row+half_size][i_column+half_size] = self.get_flux_for_pixel(row, column)
         return out
     
-    def get_predictor_matrix(self, target_x, target_y, num, dis=16, excl=5, flux_lim=(0.8, 1.2), tpfs=None, var_mask=None, m_tpfs=None, m_tpfs_list=None):
+    def get_predictor_matrix(self, target_x, target_y, num, dis=16, excl=5, flux_lim=(0.8, 1.2), multiple_tpfs=None, tpfs_epics=None):
         """prepare predictor matrix"""
-
-        if m_tpfs is None:
-            if self.tpfs == tpfs:
-                print('the same')
-            else:
-                print('different')
-                self.tpfs = tpfs
-                pixel_row = []
-                pixel_col = []
-                pixel_median = []
-                pixel_flux = []
-                for tpf in tpfs:
-                    pixel_row.append(tpf.rows)
-                    pixel_col.append(tpf.columns)
-                    pixel_median.append(tpf.median)
-                    pixel_flux.append(tpf.flux)
-                self.pixel_row = np.concatenate(pixel_row, axis=0).astype(int)
-                self.pixel_col = np.concatenate(pixel_col, axis=0).astype(int)
-                self.pixel_median = np.concatenate(pixel_median, axis=0)
-                self.pixel_flux = np.concatenate(pixel_flux, axis=1)
-        else:
-            (self.pixel_row, self.pixel_col) = m_tpfs.get_rows_columns(m_tpfs_list)
-            self.pixel_flux = m_tpfs.get_fluxes(m_tpfs_list)
-            self.pixel_median = m_tpfs.get_median_fluxes(m_tpfs_list)
-            #concatenated_data = m_tpfs.get_rows_columns(m_tpfs_list)
-            #(self.pixel_row, self.pixel_col, self.pixel_median, self.pixel_flux) = concatenated_data
+        (self.pixel_row, self.pixel_col) = multiple_tpfs.get_rows_columns(tpfs_epics)
+        self.pixel_flux = multiple_tpfs.get_fluxes(tpfs_epics)
+        self.pixel_median = multiple_tpfs.get_median_fluxes(tpfs_epics)
 
         target_index = self._get_pixel_index(target_x, target_y)
         pixel_mask = np.ones_like(self.pixel_row, dtype=bool)

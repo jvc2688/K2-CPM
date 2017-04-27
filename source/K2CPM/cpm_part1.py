@@ -59,8 +59,8 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
             print('pixel out of range')
         elif tpf_data.check_pixel_covered(column=pixel[1], row=pixel[0]):
             predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl,
-                                                        flux_lim=flux_lim, var_mask=None,
-                                                        m_tpfs=m_tpfs, m_tpfs_list=epics_to_use)
+                                                        flux_lim=flux_lim, 
+                                                        multiple_tpfs=m_tpfs, tpfs_epics=epics_to_use)
             while predictor_matrix.shape[1]<num_predictor:
                 r += 6
                 epic_list_new = set(epic.get_tpfs(ra, dec, r, camp, tpf_data.channel))
@@ -71,8 +71,8 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                     while predictor_matrix.shape[1] < num_predictor:
                         old_num = predictor_matrix.shape[1]
                         predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl,
-                                                        flux_lim=(low_lim,up_lim), var_mask=None,
-                                                        m_tpfs=m_tpfs, m_tpfs_list=epics_to_use)
+                                                        flux_lim=(low_lim,up_lim), 
+                                                        multiple_tpfs=m_tpfs, tpfs_epics=epics_to_use)
                         low_lim = np.max(low_lim-flux_lim_step_down, min_flux_lim)
                         up_lim = up_lim + flux_lim_step_up
                         difference = predictor_matrix.shape[1] - old_num
@@ -89,8 +89,8 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                     # XXX THE ABOVE LOOP SHOULD BE SOMEHOW TRANSLATED.
                     
                     predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl,
-                                                        flux_lim=[low_lim, up_lim], var_mask=None,
-                                                        m_tpfs=m_tpfs, m_tpfs_list=epics_to_use)
+                                                        flux_lim=[low_lim, up_lim],
+                                                        multiple_tpfs=m_tpfs, tpfs_epics=epics_to_use)
                     epic_list = epic_list_new
 
             if num_pca>0:
