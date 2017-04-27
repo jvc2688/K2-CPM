@@ -91,11 +91,8 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                 predictor_matrix = pca.transform(predictor_matrix)
                 
             tpf_set = multipletpf.MultipleTpf()
-            # THE LOOP BELOW IS MOST PROBABLY WRONG.
-            # It doesn't use the tpf variable.
             for tpf in tpfs:
-                new_tpf = tpfdata.TpfData(epic_id=target_epic_num, campaign=camp)
-                tpf_set.add_tpf_data(new_tpf)
+                tpf_set.add_tpf_data(tpf)
             out_predictor_epoch_masks.append(tpf_set.predictor_epoch_mask)
             
             predictor_matrix = predictor_matrix[tpf_set.predictor_epoch_mask]
