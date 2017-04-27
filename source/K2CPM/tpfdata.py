@@ -1,5 +1,6 @@
 
 import os
+import warnings
 import numpy as np
 import urllib
 from sklearn.decomposition import PCA
@@ -121,6 +122,8 @@ class TpfData(object):
 
     def check_pixel_covered(self, column, row):
         """check if we have data for given (column,row) pixel"""
+        if not self.check_pixel_in_tpf(column, row):
+            return False
         mask_value = self.mask[row - self.reference_row, column - self.reference_column]
         return (mask_value > 0)
         
@@ -145,6 +148,8 @@ class TpfData(object):
 
     def get_flux_for_pixel(self, row, column):
         """extracts flux for a single pixel (all epochs) specified as row and column"""
+        if not self.check_pixel_covered(column, row):
+            return None
         index = self._get_pixel_index(row, column)
         return self.flux[:,index]
 
@@ -216,6 +221,10 @@ class TpfData(object):
     def save_pixel_curve(self, row, column, file_name, full_time=True):
         """saves the time vector and the flux for a single pixel into a file"""
         flux = self.get_flux_for_pixel(row=row, column=column)
+        if flux is None:
+            msg = "wrong call to save_pixel_curve():\nrow = {:}\ncolumn={:}"
+            warnings.warn(msg.format(row, column))
+            return
         time = np.copy(self.jd_short)
         if full_time:
             time += 2450000.
@@ -227,6 +236,10 @@ class TpfData(object):
         the time vector, flux vector, and flux_err vector 
         for a single pixel into a file"""
         flux = self.get_flux_for_pixel(row=row, column=column)
+        if flux is None:
+            msg = "wrong call to save_pixel_curve_with_err():\nrow = {:}\ncolumn={:}"
+            warnings.warn(msg.format(row, column))
+            return
         flux_err = self.get_flux_err_for_pixel(row=row, column=column)
         time = np.copy(self.jd_short)
         if full_time:
