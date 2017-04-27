@@ -194,8 +194,11 @@ class TpfData(object):
                 self.pixel_median = np.concatenate(pixel_median, axis=0)
                 self.pixel_flux = np.concatenate(pixel_flux, axis=1)
         else:
-            concatenated_data = m_tpfs.get_rows_columns(m_tpfs_list)
-            (self.pixel_row, self.pixel_col, self.pixel_median, self.pixel_flux) = concatenated_data
+            (self.pixel_row, self.pixel_col) = m_tpfs.get_rows_columns(m_tpfs_list)
+            self.pixel_flux = m_tpfs.get_fluxes(m_tpfs_list)
+            self.pixel_median = m_tpfs.get_median_fluxes(m_tpfs_list)
+            #concatenated_data = m_tpfs.get_rows_columns(m_tpfs_list)
+            #(self.pixel_row, self.pixel_col, self.pixel_median, self.pixel_flux) = concatenated_data
 
         target_index = self._get_pixel_index(target_x, target_y)
         pixel_mask = np.ones_like(self.pixel_row, dtype=bool)

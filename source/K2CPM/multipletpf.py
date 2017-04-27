@@ -13,7 +13,10 @@ class MultipleTpf(object):
         self._epic_ids = [] # This is sorted list and all elements are of string type.
         self._predictor_epoch_mask = None
         self._campaign = None
+        
         self._get_rows_columns_epics = None
+        self._get_fluxes_epics = None
+        self._get_median_fluxes_epics = None
 
     def add_tpf_data(self, tpf_data):
         """add one more instance of TpfData"""
@@ -56,35 +59,63 @@ class MultipleTpf(object):
             epic_id_list = [int(line) for line in list_file.readlines()]
         self.add_tpf_data_from_epic_list(epic_id_list=epic_id_list, campaign=campaign)
 
-    def get_rows_columns(self, epics_to_included):
-        """get concatenated rows and columns for selected epics"""
-        get_rows_columns_epics = []
+    def _limit_epic_ids_to_list(self, epic_list):
+        """limit self._epic_ids to ones in epic_list"""
+        out = []
         for epic in self._epic_ids:
-            if epic in epics_to_included:
-                get_rows_columns_epics.append(epic)
+            if epic in epic_list:
+                out.append(epic)
+        return out
+
+    def get_rows_columns(self, epics_to_include):
+        """get concatenated rows and columns for selected epics"""
+        get_rows_columns_epics = self._limit_epic_ids_to_list(epics_to_include)
         if get_rows_columns_epics == self._get_rows_columns_epics:
             print("XXXXX SAME XXXXX")
-            #return (self._get_rows_columns_rows, self._get_rows_columns_columns)
+            return (self._get_rows_columns_rows, self._get_rows_columns_columns)
         print("XXXXX different XXXXXX")
         self._get_rows_columns_epics = get_rows_columns_epics
 
         rows = []
         columns = []
-        median_flux = []
-        flux = []
         for (i, epic) in enumerate(self._epic_ids):
-            if not epic in epics_to_included:
+            if not epic in epics_to_include:
                 continue
             rows.append(self._tpfs[i].rows)
             columns.append(self._tpfs[i].columns)
-            median_flux.append(self._tpfs[i].median)
-            flux.append(self._tpfs[i].flux)
         self._get_rows_columns_rows = np.concatenate(rows, axis=0).astype(int)
         self._get_rows_columns_columns = np.concatenate(columns, axis=0).astype(int)
-        #return (self._get_rows_columns_rows, self._get_rows_columns_columns)
-        return (self._get_rows_columns_rows, self._get_rows_columns_columns, 
-                np.concatenate(median_flux, axis=0), 
-                np.concatenate(flux, axis=1))
+        return (self._get_rows_columns_rows, self._get_rows_columns_columns)
+
+    def get_fluxes(self, epics_to_include):
+        """get concatenated fluxes for selected epics"""
+        get_fluxes_epics = self._limit_epic_ids_to_list(epics_to_include)
+        if get_fluxes_epics == self._get_fluxes_epics:
+            return self._get_fluxes
+        self._get_fluxes_epics = get_fluxes_epics
+
+        flux = []
+        for (i, epic) in enumerate(self._epic_ids):
+            if not epic in epics_to_include:
+                continue
+            flux.append(self._tpfs[i].flux)
+        self._get_fluxes = np.concatenate(flux, axis=1)
+        return self._get_fluxes
+
+    def get_median_fluxes(self, epics_to_include):
+        """get concatenated median fluxes for selected epics"""
+        get_median_fluxes_epics = self._limit_epic_ids_to_list(epics_to_include)
+        if get_median_fluxes_epics == self._get_median_fluxes_epics:
+            return self._get_median_fluxes
+        self._get_median_fluxes_epics = get_median_fluxes_epics
+
+        median_flux = []
+        for (i, epic) in enumerate(self._epic_ids):
+            if not epic in epics_to_include:
+                continue
+            median_flux.append(self._tpfs[i].median)
+        self._get_median_fluxes = np.concatenate(median_flux, axis=0)
+        return self._get_median_fluxes
 
 
 if __name__ == '__main__':
