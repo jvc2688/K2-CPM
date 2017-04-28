@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 import argparse
 
-from K2CPM import epic, matrix_xy, multipletpf, tpfdata
+from K2CPM import matrix_xy, multipletpf, tpfdata
 from K2CPM import wcsfromtpf
 
 
@@ -29,20 +29,18 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
     tpf_data = tpfdata.TpfData(epic_id=target_epic_num, campaign=camp)
     ra = tpf_data.ra_object
     dec = tpf_data.dec_object
-    r = 0
-    epic_list = []
-    while len(epic_list) <= 5:
-        r += 6
-        epic_list = epic.get_tpfs(ra, dec, r, camp, tpf_data.channel)
-
-    epic_list = sorted(set(epic_list)) 
+    
     #for epic_num in epic_list:
     #    if epic_num == 200070874 or epic_num == 200070438:
     #        continue
+    # XXX THE ABOVE LOOP SHOULD BE SOMEHOW TRANSLATED.
 
     wcs = wcsfromtpf.WcsFromTpf(tpf_data.channel, camp)
-    (epics_to_use, _, _) = wcs.get_epics_around_radec(ra, dec)
-    epics_to_use = epics_to_use[:15] # THIS HAS TO BE CHANGED. !!!
+    (epics_to_use_all, _, _) = wcs.get_epics_around_radec(ra, dec)
+    
+    n_use = 15 # THIS HAS TO BE CHANGED. !!!
+    epics_to_use = epics_to_use_all[:n_use]
+    
     m_tpfs = multipletpf.MultipleTpf()
     m_tpfs.add_tpf_data_from_epic_list(epics_to_use, camp)
 
@@ -61,37 +59,28 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
             predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl,
                                                         flux_lim=flux_lim, 
                                                         multiple_tpfs=m_tpfs, tpfs_epics=epics_to_use)
-            while predictor_matrix.shape[1]<num_predictor:
-                r += 6
-                epic_list_new = set(epic.get_tpfs(ra, dec, r, camp, tpf_data.channel))
-                more = epic_list_new.difference(epic_list)
-                if len(more) == 0:
-                    low_lim = flux_lim[0] - flux_lim_step_down
-                    up_lim = flux_lim[1] + flux_lim_step_up
-                    while predictor_matrix.shape[1] < num_predictor:
-                        old_num = predictor_matrix.shape[1]
-                        predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl,
-                                                        flux_lim=(low_lim,up_lim), 
+            while predictor_matrix.shape[1] < num_predictor:
+                n_use += 3
+                epics_to_use = epics_to_use_all[:n_use]
+                m_tpfs.add_tpf_data_from_epic_list(epics_to_use[-3:], camp)
+# Re-code stuff below ???
+                    #low_lim = flux_lim[0] - flux_lim_step_down
+                    #up_lim = flux_lim[1] + flux_lim_step_up
+                    #while predictor_matrix.shape[1] < num_predictor:
+                    #    old_num = predictor_matrix.shape[1]
+                    #    predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl,
+                    #                                    flux_lim=(low_lim,up_lim), 
+                    #                                    multiple_tpfs=m_tpfs, tpfs_epics=epics_to_use)
+                    #    low_lim = np.max(low_lim-flux_lim_step_down, min_flux_lim)
+                    #    up_lim = up_lim + flux_lim_step_up
+                    #    difference = predictor_matrix.shape[1] - old_num
+                    #    if difference == 0:
+                    #        print('no more pixel at all')
+                    #        break
+                    #break
+                predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl,
+                                                        flux_lim=(low_lim, up_lim),
                                                         multiple_tpfs=m_tpfs, tpfs_epics=epics_to_use)
-                        low_lim = np.max(low_lim-flux_lim_step_down, min_flux_lim)
-                        up_lim = up_lim + flux_lim_step_up
-                        difference = predictor_matrix.shape[1] - old_num
-                        if difference == 0:
-                            print('no more pixel at all')
-                            break
-                    break
-                elif len(more)>0:
-                    for epic_num in more:
-                        if epic_num == 200070874 or epic_num == 200070438:
-                            continue
-                        print(epic_num)
-                        #tpfs.append(tpfdata.TpfData(epic_id=epic_num, campaign=camp))
-                    # XXX THE ABOVE LOOP SHOULD BE SOMEHOW TRANSLATED.
-                    
-                    predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl,
-                                                        flux_lim=[low_lim, up_lim],
-                                                        multiple_tpfs=m_tpfs, tpfs_epics=epics_to_use)
-                    epic_list = epic_list_new
 
             if num_pca>0:
                 pca = PCA(n_components=num_pca, svd_solver='full')
