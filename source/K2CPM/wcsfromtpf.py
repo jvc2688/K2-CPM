@@ -88,6 +88,13 @@ class WcsFromTpf(object):
         epics = np.array(self.sorted_epics)
         index = np.argsort(min_values, kind="mergesort")
         return (epics[index], min_values[index], max_values[index])
+        
+    def radec_for_pixel(self, column, row):
+        """get RA & Dec (float format in deg.) for given pixel"""
+        selection = (self.pix_x == column) & (self.pix_y == row)
+        if not np.any(selection):
+            raise ValueError('Wrong input in radec_for_pixel(): column = {:}, row = {:}'.format(column, row))
+        return (self.ra[selection][0], self.dec[selection][0])
 
 
 if __name__ == '__main__':
