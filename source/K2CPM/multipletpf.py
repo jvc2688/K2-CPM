@@ -23,7 +23,8 @@ class MultipleTpf(object):
         if not isinstance(tpf_data, tpfdata.TpfData):
             msg = 'Ooops... MultipleTpf.add_tpf_data() requires input that is an instance of TpfData class'
             raise ValueError(msg)
-        if tpf_data.epic_id in self._epic_ids:
+        epic_id = str(tpf_data.epic_id)
+        if epic_id in self._epic_ids:
             return
         if self._campaign is None:
             self._campaign = tpf_data.campaign
@@ -32,9 +33,9 @@ class MultipleTpf(object):
                 msg = 'MultipleTpf.add_tpf_data() cannot add data from a different campaign ({:} and {:})'
                 raise ValueError(msg.format(self._campaign, tpf_data.campaign))
         
-        index = bisect(self._epic_ids, tpf_data.epic_id)
+        index = bisect(self._epic_ids, epic_id)
         self._tpfs.insert(index, tpf_data)
-        self._epic_ids.insert(index, tpf_data.epic_id)
+        self._epic_ids.insert(index, epic_id)
         
         if self._predictor_epoch_mask is None:
             self._predictor_epoch_mask = np.ones_like(tpf_data.epoch_mask, dtype=bool)

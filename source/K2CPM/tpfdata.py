@@ -31,7 +31,6 @@ class TpfData(object):
         self._load_data(self._path)
         self._column = None
         self._row = None
-        self.tpfs = None # XXX
 
     def _guess_file_name(self):
         """guesses file name based on epic_id and campaign"""

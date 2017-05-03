@@ -30,6 +30,7 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
     tpf_data = tpfdata.TpfData(epic_id=target_epic_num, campaign=camp)
     wcs = wcsfromtpf.WcsFromTpf(tpf_data.channel, camp)
     m_tpfs = multipletpf.MultipleTpf()
+    m_tpfs.add_tpf_data(tpf_data)
     
     #for epic_num in epic_list:
     #    if epic_num == 200070874 or epic_num == 200070438:
