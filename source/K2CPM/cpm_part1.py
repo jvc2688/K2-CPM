@@ -32,11 +32,6 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
     m_tpfs = multipletpf.MultipleTpf()
     m_tpfs.add_tpf_data(tpf_data)
     
-    #for epic_num in epic_list:
-    #    if epic_num == 200070874 or epic_num == 200070438:
-    #        continue
-    # XXX THE ABOVE LOOP SHOULD BE SOMEHOW TRANSLATED.
-
     if pixel_list is None:
         print('no pixel list, run cpm on full tpf')
         pixel_list = tpf_data.pixel_list

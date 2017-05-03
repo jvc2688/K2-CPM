@@ -2,13 +2,13 @@ import numpy as np
 from bisect import bisect
 
 #import tpfdata
-from K2CPM import tpfdata
+from K2CPM import tpfdata, hugetpf
 
 
 class MultipleTpf(object):
     """keeps a collection of TPF files"""
 
-    def __init__(self):
+    def __init__(self, n_remove_huge=None):
         self._tpfs = [] # This list has TpfData instances and the order corresponds to self._epic_ids.
         self._epic_ids = [] # This is sorted list and all elements are of string type.
         self._predictor_epoch_mask = None
@@ -17,6 +17,9 @@ class MultipleTpf(object):
         self._get_rows_columns_epics = None
         self._get_fluxes_epics = None
         self._get_median_fluxes_epics = None
+        
+        self._n_remove_huge = n_remove_huge
+        self._huge_tpf = None
 
     def add_tpf_data(self, tpf_data):
         """add one more instance of TpfData"""
@@ -28,6 +31,10 @@ class MultipleTpf(object):
             return
         if self._campaign is None:
             self._campaign = tpf_data.campaign
+            if self._n_remove_huge is None:
+                self._huge_tpf = hugetpf.HugeTpf(campaign=self._campaign)
+            else:
+                self._huge_tpf = hugetpf.HugeTpf(campaign=self._campaign, n_huge=self._n_remove_huge)
         else:
             if self._campaign != tpf_data.campaign:
                 msg = 'MultipleTpf.add_tpf_data() cannot add data from a different campaign ({:} and {:})'
@@ -49,8 +56,11 @@ class MultipleTpf(object):
     def add_tpf_data_from_epic_list(self, epic_id_list, campaign):
         """for each epic_id in the list, construct TPF object and add it to the set"""
         for epic_id in epic_id_list:
-            if epic_id in self._epic_ids:
+            if str(epic_id) in self._epic_ids:
                 continue
+            if str(epic_id) in self._huge_tpf.huge_ids:
+                continue
+                # This way we skip huge TPF files, though they can still be added via self.add_tpf_data().
             new_tpf = tpfdata.TpfData(epic_id=epic_id, campaign=campaign)
             self.add_tpf_data(new_tpf)
             
