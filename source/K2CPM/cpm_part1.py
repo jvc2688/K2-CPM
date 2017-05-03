@@ -25,24 +25,16 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
     flux_lim_step_down = 0.1
     flux_lim_step_up = 0.1
     min_flux_lim = 0.1
+    n_use = 15 # THIS HAS TO BE CHANGED. !!!
 
     tpf_data = tpfdata.TpfData(epic_id=target_epic_num, campaign=camp)
-    ra = tpf_data.ra_object
-    dec = tpf_data.dec_object
+    wcs = wcsfromtpf.WcsFromTpf(tpf_data.channel, camp)
+    m_tpfs = multipletpf.MultipleTpf()
     
     #for epic_num in epic_list:
     #    if epic_num == 200070874 or epic_num == 200070438:
     #        continue
     # XXX THE ABOVE LOOP SHOULD BE SOMEHOW TRANSLATED.
-
-    wcs = wcsfromtpf.WcsFromTpf(tpf_data.channel, camp)
-    (epics_to_use_all, _, _) = wcs.get_epics_around_radec(ra, dec)
-    
-    n_use = 15 # THIS HAS TO BE CHANGED. !!!
-    epics_to_use = epics_to_use_all[:n_use]
-    
-    m_tpfs = multipletpf.MultipleTpf()
-    m_tpfs.add_tpf_data_from_epic_list(epics_to_use, camp)
 
     if pixel_list is None:
         print('no pixel list, run cpm on full tpf')
@@ -56,6 +48,11 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
         if not tpf_data.check_pixel_in_tpf(column=pixel[1], row=pixel[0]):
             print('pixel out of range')
         elif tpf_data.check_pixel_covered(column=pixel[1], row=pixel[0]):
+            (ra, dec) = wcs.radec_for_pixel(column=pixel[1], row=pixel[0])
+            (epics_to_use_all, _, _) = wcs.get_epics_around_radec(ra, dec)
+            epics_to_use = epics_to_use_all[:n_use]
+            m_tpfs.add_tpf_data_from_epic_list(epics_to_use, camp)
+            
             predictor_matrix = tpf_data.get_predictor_matrix(pixel[0], pixel[1], num_predictor, dis=dis, excl=excl,
                                                         flux_lim=flux_lim, 
                                                         multiple_tpfs=m_tpfs, tpfs_epics=epics_to_use)
