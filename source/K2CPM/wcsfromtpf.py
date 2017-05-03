@@ -26,7 +26,7 @@ class WcsFromTpf(object):
         self.ra = hdulist[1].data.field(2)
         self.dec = hdulist[1].data.field(3)
         self.epic = hdulist[1].data.field(4)
-        hdulist.close
+        hdulist.close()
         self._skycoord = SkyCoord(self.ra*u.deg, self.dec*u.deg)
         self._sorted_epics = None
 
