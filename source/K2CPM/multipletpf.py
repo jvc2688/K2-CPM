@@ -82,9 +82,7 @@ class MultipleTpf(object):
         """get concatenated rows and columns for selected epics"""
         get_rows_columns_epics = self._limit_epic_ids_to_list(epics_to_include)
         if get_rows_columns_epics == self._get_rows_columns_epics:
-            print("XXXXX SAME XXXXX")
             return (self._get_rows_columns_rows, self._get_rows_columns_columns)
-        print("XXXXX different XXXXXX")
         self._get_rows_columns_epics = get_rows_columns_epics
 
         rows = []
@@ -127,19 +125,3 @@ class MultipleTpf(object):
             median_flux.append(self._tpfs[i].median)
         self._get_median_fluxes = np.concatenate(median_flux, axis=0)
         return self._get_median_fluxes
-
-
-if __name__ == '__main__':
-    directory = 'tpf/'
-    campaign = 92 
-    tpfs_epic_list_file = "../test/output/1-epic.dat"
-    out_file = '1-predictor_epoch_mask.dat'
-    
-    tpfdata.TpfData.directory = directory
-    
-    tpf_set = MultipleTpf()
-    tpf_set.add_tpf_data_from_epic_list_in_file(tpfs_epic_list_file, campaign=campaign)
-    predictor_epoch_mask = tpf_set.predictor_epoch_mask
-
-    np.savetxt(out_file, predictor_epoch_mask, fmt='%r')
-    

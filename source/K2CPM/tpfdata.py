@@ -225,7 +225,7 @@ class TpfData(object):
         for a single pixel into a file"""
         flux = self.get_flux_for_pixel(row=row, column=column)
         if flux is None:
-            msg = "wrong call to save_pixel_curve_with_err():\nrow = {:}\ncolumn={:}"
+            msg = "\n\nwrong call to save_pixel_curve_with_err():\nrow = {:}\ncolumn = {:}\n"
             warnings.warn(msg.format(row, column))
             return
         flux_err = self.get_flux_err_for_pixel(row=row, column=column)
