@@ -1,5 +1,6 @@
 
 import os
+import sys
 import warnings
 import numpy as np
 import urllib
@@ -96,7 +97,10 @@ class TpfData(object):
         url_template = 'http://archive.stsci.edu/missions/k2/target_pixel_files/c{0:d}/{1:d}/{2:05d}/{3}'
         url_to_load = url_template.format(self.campaign, d1, d2, self.file_name)
         
-        url_retriver = urllib.URLopener()
+        if sys.version_info[0] > 2:
+            url_retriver = urllib.request.URLopener()
+        else:
+            url_retriver = urllib.URLopener()
         url_retriver.retrieve(url_to_load, self._path)
     
     @property
