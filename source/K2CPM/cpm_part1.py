@@ -11,14 +11,14 @@ from K2CPM import wcsfromtpf
 
 def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl, 
                     flux_lim, input_dir, pixel_list=None, train_lim=None, 
-                    output_file=None, 
+                    output_file=None, output_file_mask=None,  
                     return_predictor_epoch_masks=False):
 # REMOVED: l2, output_dir
-# ADDED: output_file, return_predictor_epoch_masks
+# ADDED: output_file, output_file_mask, return_predictor_epoch_masks
 #def run_cpm_part1(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, input_dir, output_dir, pixel_list=None, train_lim=None):
 
     if pixel_list is not None:
-        if pixel_list.shape[0] != 1 and output_file is not None:
+        if pixel_list.shape[0] != 1 and (output_file is not None or output_file_mask is not None):
             raise ValueError('\n\nCurrently we can deal with only a single pixel at a time if the output file is specified')
     tpfdata.TpfData.directory = input_dir
 
@@ -80,13 +80,13 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
                 pca.fit(predictor_matrix)
                 predictor_matrix = pca.transform(predictor_matrix)
                 
-            out_predictor_epoch_masks.append(m_tpfs.predictor_epoch_mask)
-
-            predictor_matrix = predictor_matrix[m_tpfs.predictor_epoch_mask]
             out_predictor_matrixes.append(predictor_matrix)
+            out_predictor_epoch_masks.append(m_tpfs.predictor_epoch_mask)
 
             if output_file is not None: 
                 matrix_xy.save_matrix_xy(predictor_matrix, output_file)
+            if output_file_mask is not None:
+                np.savetxt(output_file_mask, m_tpfs.predictor_epoch_mask, fmt='%r')
 
     if return_predictor_epoch_masks:
         return (out_predictor_matrixes, out_predictor_epoch_masks)

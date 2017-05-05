@@ -1,9 +1,6 @@
 import sys
 import numpy as np
 
-#import k2_cpm
-#import matrix_xy
-#from code import k2_cpm
 from K2CPM import k2_cpm_small
 from K2CPM import matrix_xy
 
@@ -17,13 +14,11 @@ def read_true_false_file(file_name):
             out.append(parser[line[:-1].upper()])
     return np.array(out)
 
-def cpm_part2(tpf_time, tpf_flux, tpf_flux_err, tpf_epoch_mask, predictor_matrix, l2, train_lim=None):
-    # TO_BE_DONE - use tpf_flux_err if user wants
+# TO_BE_DONE - use tpf_flux_err if user wants
+def cpm_part2(tpf_time, tpf_flux, tpf_flux_err, tpf_epoch_mask, predictor_matrix, predictor_mask, l2, train_lim=None):
     """get predictor_matrix, run CPM, calculate dot product and difference of target_flux and fit_flux"""
-    # run get_fit_matrix_ffi()
-    fit_matrix_results = k2_cpm_small.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, predictor_matrix, l2, tpf_time, 0, None)
-
-    # decompose results of get_fit_matrix_ffi()
+    # run get_fit_matrix_ffi() which mostly applies joint epoch_mask
+    fit_matrix_results = k2_cpm_small.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, predictor_matrix, predictor_mask, l2, tpf_time, 0, None)
     (target_flux, predictor_matrix, none_none, l2_vector, time) = fit_matrix_results
     
     # run CPM:
@@ -44,7 +39,8 @@ def execute_cpm_part2(n_test=1):
     in_directory_2 = "../tests/intermediate/expected/"
     out_directory = "../tests/output/"
     
-    pre_matrix_file = "{:}{:}-pre_matrix_xy.dat".format(in_directory_2, n_test)
+#    pre_matrix_file = "{:}{:}-pre_matrix_xy.dat".format(in_directory_2, n_test)
+    pre_matrix_file = "{:}{:}-pre_matrix_xy.dat".format(in_directory, n_test)
     predictor_epoch_mask_file = "{:}{:}-predictor_epoch_mask.dat".format(in_directory, n_test)
     pixel_flux_file_name = '{:}{:}-pixel_flux.dat'.format(in_directory, n_test)
     epoch_mask_file_name = '{:}{:}-epoch_mask.dat'.format(in_directory, n_test)
@@ -63,7 +59,7 @@ def execute_cpm_part2(n_test=1):
 
     # Calculations:
     (result, fit_flux, dif, time) = cpm_part2(tpf_time, tpf_flux, tpf_flux_err,
-                                            tpf_epoch_mask, pre_matrix, l2) 
+                                    tpf_epoch_mask, pre_matrix, predictor_epoch_mask, l2) 
 
     # Save results:
     np.savetxt(result_file_name, result, fmt='%.8f')

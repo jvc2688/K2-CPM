@@ -1,10 +1,9 @@
 import numpy as np
 
-#import leastSquareSolver as lss
 from K2CPM import leastSquareSolver as lss
 
 
-def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, time, poly=0, ml=None):
+def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predictor_mask, l2, time, poly=0, ml=None):
     """
     ## inputs:
     - `predictor_matrix` - matrix of predictor fluxes
@@ -19,11 +18,11 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, tim
     - `l2_vector` - vector of the l2 regularization 
     """
 
-    epoch_mask = target_epoch_mask
+    epoch_mask = target_epoch_mask * predictor_mask
 
     #remove bad time point based on simulteanous epoch mask
     target_flux = target_flux[epoch_mask]
-#    predictor_matrix = predictor_matrix[epoch_mask]
+    predictor_matrix = predictor_matrix[epoch_mask]
     time = time[epoch_mask]
 
     l2_length_of_ones = predictor_matrix.shape[0]
@@ -42,7 +41,7 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, l2, tim
 
     l2_vector[l2_length_of_ones:] = 0. # This ensures that there's no reguralization on concatenated models and polynomials. 
 
-    return target_flux, predictor_matrix, None, l2_vector, time
+    return target_flux, predictor_matrix, epoch_mask, l2_vector, time
 
 def fit_target(target_flux, predictor_flux_matrix, time=None, covar_list=None, l2_vector=None, train_lim=None):
     """
@@ -67,4 +66,3 @@ def fit_target(target_flux, predictor_flux_matrix, time=None, covar_list=None, l
 
     result = lss.linear_least_squares(predictor_flux_matrix, target_flux, covar, l2_vector)
     return result
-
