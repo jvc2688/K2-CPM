@@ -64,6 +64,7 @@ class TpfData(object):
         quality_flags_ok = ((quality_flags == 0) | (quality_flags == 8192) | (quality_flags == 16384) | (quality_flags == 24576)) 
         foo = np.sum(np.sum((self.pixel_mask > 0), axis=2), axis=1) # Does anybody understand what is happening here?
         self.epoch_mask = (foo > 0) & np.isfinite(self.jd_short) & quality_flags_ok
+        self.jd_short_masked = self.jd_short[self.epoch_mask]
         flux = flux[:, self.mask>0]
         if not np.isfinite(flux).all():
             raise ValueError('non-finite value in flux table of {:} - feature not done yet'.format(file_name))
