@@ -150,28 +150,42 @@ class TpfData(object):
             out = None
         return out
 
-    def get_flux_for_pixel(self, row, column):
+    def get_flux_for_pixel(self, row, column, apply_epoch_mask=False):
         """extracts flux for a single pixel (all epochs) specified as row and column"""
         if not self.check_pixel_covered(column, row):
             return None
         index = self._get_pixel_index(row, column)
-        return self.flux[:,index]
+        if apply_epoch_mask:
+            return self.flux[:,index][self.epoch_mask]
+        else:
+            return self.flux[:,index]
 
-    def get_flux_err_for_pixel(self, row, column):
+    def get_flux_err_for_pixel(self, row, column, apply_epoch_mask=False):
         """extracts flux_err for a single pixel (all epochs) specified as row and column"""
+        if not self.check_pixel_covered(column, row):
+            return None
         index = self._get_pixel_index(row, column)
-        return self.flux_err[:,index]
+        if apply_epoch_mask:
+            return self.flux_err[:,index][self.epoch_mask]
+        else:
+            return self.flux_err[:,index]
     
-    def get_fluxes_for_square(self, row_center, column_center, half_size):
+    def get_fluxes_for_square(self, row_center, column_center, half_size, apply_epoch_mask=False):
         """get matrix that gives fluxes for pixels from (center-half_size) to
         (center+half_size) in each axis and including both ends"""
         full_size = 2 * half_size + 1
-        out = np.zeros((full_size, full_size, len(self.jd_short)))
+        if apply_epoch_mask:
+            length = sum(self.epoch_mask)
+        else:
+            length = len(self.jd_short) 
+        out = np.zeros((full_size, full_size, length))
+        
         for i_row in range(-half_size, half_size+1):
             row = i_row + row_center
             for i_column in range(-half_size, half_size+1):
                 column = i_column + column_center
-                out[i_row+half_size][i_column+half_size] = self.get_flux_for_pixel(row, column)
+                out[i_row+half_size][i_column+half_size] = self.get_flux_for_pixel(
+                                        row, column, apply_epoch_mask=apply_epoch_mask)
         return out
     
     def get_predictor_matrix(self, target_x, target_y, num, dis=16, excl=5, flux_lim=(0.8, 1.2), multiple_tpfs=None, tpfs_epics=None):
