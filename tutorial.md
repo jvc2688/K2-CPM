@@ -49,8 +49,27 @@ wcs = wcsfromtpf.WcsFromTpf(channel, campaign)
 nearest_pixel = wcs.get_nearest_pixel_radec(ra, dec)
 (pix_x, pix_y, _, _, epic_id, separation) = nearest_pixel
 ```
-Because of unknown reason, there is 1 pixel shift in ```pix_y``` between above values 
-and pixel with largest signal, hence:
+If you want to see raw pixel data you can plot them using, e.g., 
+```python
+import matplotlib.pyplot as plt
+from K2CPM import tpfdata, plot_utils
+
+tpf_dir = 'tpf/'
+half_size = 2
+file_out = "ob161043_tpf.png"
+
+tpfdata.TpfData.directory = tpf_dir
+tpf = tpfdata.TpfData(epic_id=epic_id, campaign=campaign)
+flux_matrix = tpf.get_fluxes_for_square(pix_y, pix_x, half_size)
+
+fig = plt.gcf()
+fig.set_size_inches(50, 30)
+plot_utils.plot_matrix_subplots(fig, tpf.jd_short, flux_matrix)
+plt.savefig(file_out)
+```
+The plot shows light curve for 25 pixels centered on ```(pix_x, pix_y)```. In 
+this case you're not able to see it, but we know that the event is shifted by 
+1 pixel from the predicted position, hence we apply:
 ```python
 pix_y -= 1
 ```
