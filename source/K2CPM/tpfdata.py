@@ -1,5 +1,7 @@
 
 import os
+import sys
+import warnings
 import numpy as np
 import urllib
 from sklearn.decomposition import PCA
@@ -29,7 +31,6 @@ class TpfData(object):
         self._load_data(self._path)
         self._column = None
         self._row = None
-        self.tpfs = None # XXX
 
     def _guess_file_name(self):
         """guesses file name based on epic_id and campaign"""
@@ -45,8 +46,8 @@ class TpfData(object):
         self.reference_row = hdu_list[2].header['CRVAL2P']
         self.mask = hdu_list[2].data 
         
-        self.colums = np.tile(np.arange(self.mask.shape[1], dtype=int), self.mask.shape[0]) + self.reference_column
-        self.colums = self.columns[self.mask.flatten()>0]
+        self.columns = np.tile(np.arange(self.mask.shape[1], dtype=int), self.mask.shape[0]) + self.reference_column
+        self.columns = self.columns[self.mask.flatten()>0]
         self.rows = np.repeat(np.arange(self.mask.shape[0], dtype=int), self.mask.shape[1]) + self.reference_row
         self.rows = self.rows[self.mask.flatten()>0]
         
@@ -63,6 +64,7 @@ class TpfData(object):
         quality_flags_ok = ((quality_flags == 0) | (quality_flags == 8192) | (quality_flags == 16384) | (quality_flags == 24576)) 
         foo = np.sum(np.sum((self.pixel_mask > 0), axis=2), axis=1) # Does anybody understand what is happening here?
         self.epoch_mask = (foo > 0) & np.isfinite(self.jd_short) & quality_flags_ok
+        self.jd_short_masked = self.jd_short[self.epoch_mask]
         flux = flux[:, self.mask>0]
         if not np.isfinite(flux).all():
             raise ValueError('non-finite value in flux table of {:} - feature not done yet'.format(file_name))
@@ -89,12 +91,16 @@ class TpfData(object):
         if os.path.isfile(self._path):
             return
         # File does not exist, so we download it
-        d1 = self.epic_id - self.epic_id % 100000
-        d2 = self.epic_id % 100000 - self.epic_id % 1000
+        epic_id = int(self.epic_id)
+        d1 = epic_id - epic_id % 100000
+        d2 = epic_id % 100000 - epic_id % 1000
         url_template = 'http://archive.stsci.edu/missions/k2/target_pixel_files/c{0:d}/{1:d}/{2:05d}/{3}'
         url_to_load = url_template.format(self.campaign, d1, d2, self.file_name)
         
-        url_retriver = urllib.URLopener()
+        if sys.version_info[0] > 2:
+            url_retriver = urllib.request.URLopener()
+        else:
+            url_retriver = urllib.URLopener()
         url_retriver.retrieve(url_to_load, self._path)
     
     @property
@@ -121,6 +127,8 @@ class TpfData(object):
 
     def check_pixel_covered(self, column, row):
         """check if we have data for given (column,row) pixel"""
+        if not self.check_pixel_in_tpf(column, row):
+            return False
         mask_value = self.mask[row - self.reference_row, column - self.reference_column]
         return (mask_value > 0)
         
@@ -143,38 +151,49 @@ class TpfData(object):
             out = None
         return out
 
-    def get_flux_for_pixel(self, row, column):
+    def get_flux_for_pixel(self, row, column, apply_epoch_mask=False):
         """extracts flux for a single pixel (all epochs) specified as row and column"""
+        if not self.check_pixel_covered(column, row):
+            return None
         index = self._get_pixel_index(row, column)
-        return self.flux[:,index]
-
-    def get_flux_err_for_pixel(self, row, column):
-        """extracts flux_err for a single pixel (all epochs) specified as row and column"""
-        index = self._get_pixel_index(row, column)
-        return self.flux_err[:,index]
-    
-    
-    def get_predictor_matrix(self, target_x, target_y, num, dis=16, excl=5, flux_lim=(0.8, 1.2), tpfs=None, var_mask=None):
-        """prepare predictor matrix"""
-
-        if self.tpfs == tpfs:
-            print('the same')
+        if apply_epoch_mask:
+            return self.flux[:,index][self.epoch_mask]
         else:
-            print('different')
-            self.tpfs = tpfs
-            pixel_row = []
-            pixel_col = []
-            pixel_median = []
-            pixel_flux = []
-            for tpf in tpfs:
-                pixel_row.append(tpf.rows)
-                pixel_col.append(tpf.columns)
-                pixel_median.append(tpf.median)
-                pixel_flux.append(tpf.flux)
-            self.pixel_row = np.concatenate(pixel_row, axis=0).astype(int)
-            self.pixel_col = np.concatenate(pixel_col, axis=0).astype(int)
-            self.pixel_median = np.concatenate(pixel_median, axis=0)
-            self.pixel_flux = np.concatenate(pixel_flux, axis=1)
+            return self.flux[:,index]
+
+    def get_flux_err_for_pixel(self, row, column, apply_epoch_mask=False):
+        """extracts flux_err for a single pixel (all epochs) specified as row and column"""
+        if not self.check_pixel_covered(column, row):
+            return None
+        index = self._get_pixel_index(row, column)
+        if apply_epoch_mask:
+            return self.flux_err[:,index][self.epoch_mask]
+        else:
+            return self.flux_err[:,index]
+    
+    def get_fluxes_for_square(self, row_center, column_center, half_size, apply_epoch_mask=False):
+        """get matrix that gives fluxes for pixels from (center-half_size) to
+        (center+half_size) in each axis and including both ends"""
+        full_size = 2 * half_size + 1
+        if apply_epoch_mask:
+            length = sum(self.epoch_mask)
+        else:
+            length = len(self.jd_short) 
+        out = np.zeros((full_size, full_size, length))
+        
+        for i_row in range(-half_size, half_size+1):
+            row = i_row + row_center
+            for i_column in range(-half_size, half_size+1):
+                column = i_column + column_center
+                out[i_row+half_size][i_column+half_size] = self.get_flux_for_pixel(
+                                        row, column, apply_epoch_mask=apply_epoch_mask)
+        return out
+    
+    def get_predictor_matrix(self, target_x, target_y, num, dis=16, excl=5, flux_lim=(0.8, 1.2), multiple_tpfs=None, tpfs_epics=None):
+        """prepare predictor matrix"""
+        (self.pixel_row, self.pixel_col) = multiple_tpfs.get_rows_columns(tpfs_epics)
+        self.pixel_flux = multiple_tpfs.get_fluxes(tpfs_epics)
+        self.pixel_median = multiple_tpfs.get_median_fluxes(tpfs_epics)
 
         target_index = self._get_pixel_index(target_x, target_y)
         pixel_mask = np.ones_like(self.pixel_row, dtype=bool)
@@ -205,7 +224,11 @@ class TpfData(object):
     def save_pixel_curve(self, row, column, file_name, full_time=True):
         """saves the time vector and the flux for a single pixel into a file"""
         flux = self.get_flux_for_pixel(row=row, column=column)
-        time = self.jd_short
+        if flux is None:
+            msg = "wrong call to save_pixel_curve():\nrow = {:}\ncolumn={:}"
+            warnings.warn(msg.format(row, column))
+            return
+        time = np.copy(self.jd_short)
         if full_time:
             time += 2450000.
         np.savetxt(file_name, np.array([time, flux]).T, fmt="%.5f %.8f")
@@ -216,8 +239,12 @@ class TpfData(object):
         the time vector, flux vector, and flux_err vector 
         for a single pixel into a file"""
         flux = self.get_flux_for_pixel(row=row, column=column)
+        if flux is None:
+            msg = "\n\nwrong call to save_pixel_curve_with_err():\nrow = {:}\ncolumn = {:}\n"
+            warnings.warn(msg.format(row, column))
+            return
         flux_err = self.get_flux_err_for_pixel(row=row, column=column)
-        time = self.jd_short
+        time = np.copy(self.jd_short)
         if full_time:
             time += 2450000.
         np.savetxt(file_name, np.array([time, flux, flux_err]).T, 
