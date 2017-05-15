@@ -22,7 +22,7 @@ def plot_matrix_subplots(figure, time, matrix, same_y_axis=True, data_mask=None)
     time = tpf.jd_short
     matrix = tpf.get_fluxes_for_square(pix_y, pix_x, half_size=3) # 3 gives 7x7 sublots
     """
-    y_lim = [np.min(matrix), np.max(matrix)]
+    y_lim = [np.nanmin(matrix), np.nanmax(matrix)]
     (i_max, j_max, _) = matrix.shape
     panels = np.flipud(np.arange(i_max*j_max).reshape(i_max, j_max)) + 1
     if data_mask is not None:
