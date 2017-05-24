@@ -17,6 +17,11 @@ def run_cpm_part1(target_epic_num, camp, num_predictor, num_pca, dis, excl,
 # ADDED: output_file, output_file_mask, return_predictor_epoch_masks
 #def run_cpm_part1(target_epic_num, camp, num_predictor, l2, num_pca, dis, excl, flux_lim, input_dir, output_dir, pixel_list=None, train_lim=None):
 
+    #print(target_epic_num, camp, num_predictor, num_pca, dis, excl, 
+    #                flux_lim, input_dir, pixel_list, train_lim, 
+    #                output_file, output_file_mask,  
+    #                return_predictor_epoch_masks)
+    
     if pixel_list is not None:
         if pixel_list.shape[0] != 1 and (output_file is not None or output_file_mask is not None):
             raise ValueError('\n\nCurrently we can deal with only a single pixel at a time if the output file is specified')
