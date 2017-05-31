@@ -31,10 +31,9 @@ def plot_matrix_subplots(figure, time, matrix, same_y_axis=True, data_mask=None)
     for i in range(i_max):
         for j in range(j_max):
             ax = plt.subplot(i_max, j_max, panels[i, j])
+            y_axis = matrix[i][j]
             if data_mask is not None:
-                y_axis = matrix[i][j][data_mask]
-            else:
-                y_axis = matrix[i][j]
+                y_axis = y_axis[data_mask]
                 
             ax.plot(time, y_axis, '.k')
             
