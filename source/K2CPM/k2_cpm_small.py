@@ -43,6 +43,8 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predict
         else:
             msg = 'Incorrect size of ml parameter of get_fit_matrix_ffi: {:} (expected {:} or {:})'
             raise ValueError(msg.format(ml.size, len(epoch_mask), sum(epoch_mask)))
+        if add_ml.ndim == 1:
+            add_ml = np.array([add_ml]).T
         predictor_matrix = np.concatenate((predictor_matrix, add_ml), axis=1)
 
     #construct l2 vector
@@ -51,7 +53,8 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predict
 
     return (target_flux, predictor_matrix, epoch_mask, l2_vector, time)
 
-def fit_target(target_flux, predictor_flux_matrix, time=None, covar_list=None, l2_vector=None, train_lim=None):
+def fit_target(target_flux, predictor_flux_matrix, time=None, covar_list=None, 
+                    l2_vector=None, train_lim=None):
     """
     ## inputs:
     - `predictor_flux_matrix` - fitting matrix of neighbor flux
