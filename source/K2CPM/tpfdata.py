@@ -30,6 +30,7 @@ class TpfData(object):
         self._load_data(self._path)
         self._column = None
         self._row = None
+        self._pixel_list = None
 
     def _guess_file_name(self):
         """guesses file name based on epic_id and campaign"""
@@ -108,10 +109,12 @@ class TpfData(object):
     @property
     def pixel_list(self):
         """return array with a list of all pixels"""
-        inside_1 = np.repeat(np.arange(self.n_rows), self.n_columns)
-        inside_2 = np.tile(np.arange(self.n_columns), self.n_rows)
-        inside_coords = [inside_1, inside_2]
-        return np.array(inside_coords, dtype=int).T + tpf_data.reference_pixel
+        if self._pixel_list is None:
+            inside_1 = np.repeat(np.arange(self.n_columns), self.n_rows)
+            inside_2 = np.tile(np.arange(self.n_rows), self.n_columns)
+            inside_coords = np.array([inside_1, inside_2], dtype=int).T
+            self._pixel_list = inside_coords + self.reference_pixel
+        return self._pixel_list
 
     def check_pixel_in_tpf(self, column, row):
         """check if given (column,row) pixel is inside the area covered by this TPF file"""
