@@ -5,6 +5,10 @@ import warnings
 import numpy as np
 import urllib
 from sklearn.decomposition import PCA
+if sys.version_info[0] > 2:
+    from urllib.request import URLopener
+else:
+    from urllib import URLopener
 
 from astropy.io import fits as pyfits
 
@@ -95,10 +99,7 @@ class TpfData(object):
         url_template = 'http://archive.stsci.edu/missions/k2/target_pixel_files/c{0:d}/{1:d}/{2:05d}/{3}'
         url_to_load = url_template.format(self.campaign, d1, d2, self.file_name)
         
-        if sys.version_info[0] > 2:
-            url_retriver = urllib.request.URLopener()
-        else:
-            url_retriver = urllib.URLopener()
+        url_retriver = URLopener()
         url_retriver.retrieve(url_to_load, self._path)
     
     @property
@@ -169,6 +170,7 @@ class TpfData(object):
 
     def get_flux_for_pixel(self, row, column, apply_epoch_mask=False):
         """extracts flux for a single pixel (all epochs) specified as row and column"""
+        print("GET_FLUX {:} {:} {:} {:}".format(row, column, self.check_pixel_covered(column, row), self._get_pixel_index(row, column)))
         if not self.check_pixel_covered(column, row):
             return None
         index = self._get_pixel_index(row, column)
