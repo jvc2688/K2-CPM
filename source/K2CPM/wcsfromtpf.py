@@ -91,7 +91,8 @@ class WcsFromTpf(object):
 
     def _get_selection(self, column, row):
         """find indexes of all matches with given column and row"""
-        selection = (self.pix_x == column) & (self.pix_y == row)
+        # selection = (self.pix_x == column) & (self.pix_y == row)
+        selection = (self.pix_x == column + 1) & (self.pix_y == row + 1)
         if not np.any(selection):
             msg = 'Wrong input in radec_for_pixel(): column = {:}, row = {:}'
             raise ValueError(msg.format(column, row))
