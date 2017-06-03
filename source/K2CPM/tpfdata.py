@@ -136,7 +136,6 @@ class TpfData(object):
         
     def _make_column_row_vectors(self):
         """prepare vectors with some numbers"""
-        # HERE
         self._column = np.tile(np.arange(self.n_columns, dtype=int), self.n_rows) 
         self._column = self._column[self.mask.flatten()>0] + self.reference_column
         self._row = np.repeat(np.arange(self.n_rows, dtype=int), self.n_columns) 

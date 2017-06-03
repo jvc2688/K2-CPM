@@ -8,11 +8,11 @@ from K2CPM import tpfdata, hugetpf
 class MultipleTpf(object):
     """keeps a collection of TPF files"""
 
-    def __init__(self, n_remove_huge=None):
+    def __init__(self, n_remove_huge=None, campaign=None):
         self._tpfs = [] # This list has TpfData instances and the order corresponds to self._epic_ids.
         self._epic_ids = [] # This is sorted list and all elements are of string type.
         self._predictor_epoch_mask = None
-        self._campaign = None
+        self._campaign = campaign
         
         self._get_rows_columns_epics = None
         self._get_fluxes_epics = None
@@ -53,8 +53,12 @@ class MultipleTpf(object):
         """predictor epoch mask"""
         return self._predictor_epoch_mask
 
-    def add_tpf_data_from_epic_list(self, epic_id_list, campaign):
+    def add_tpf_data_from_epic_list(self, epic_id_list, campaign=None):
         """for each epic_id in the list, construct TPF object and add it to the set"""
+        if campaign is None:
+            if self._campaign is None:
+                raise ValueError('MultipleTpf - campaign not known')
+            campaign = self._campaign
         for epic_id in epic_id_list:
             if str(epic_id) in self._epic_ids:
                 continue
@@ -64,8 +68,12 @@ class MultipleTpf(object):
             new_tpf = tpfdata.TpfData(epic_id=epic_id, campaign=campaign)
             self.add_tpf_data(new_tpf)
             
-    def add_tpf_data_from_epic_list_in_file(self, epic_id_list_file, campaign):
+    def add_tpf_data_from_epic_list_in_file(self, epic_id_list_file, campaign=None):
         """read data from file and apply add_tpf_data_from_epic_list()"""
+        if campaign is None:
+            if self._campaign is None:
+                raise ValueError('MultipleTpf() - campaign not known')
+            campaign = self._campaign        
         with open(epic_id_list_file) as list_file:
             epic_id_list = [int(line) for line in list_file.readlines()]
         self.add_tpf_data_from_epic_list(epic_id_list=epic_id_list, campaign=campaign)
