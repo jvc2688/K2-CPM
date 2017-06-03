@@ -31,6 +31,7 @@ class MultipleTpf(object):
             return
         if self._campaign is None:
             self._campaign = tpf_data.campaign
+        if not self._tpfs:
             if self._n_remove_huge is None:
                 self._huge_tpf = hugetpf.HugeTpf(campaign=self._campaign)
             else:
@@ -73,9 +74,10 @@ class MultipleTpf(object):
         for epic_id in epic_id_list:
             if str(epic_id) in self._epic_ids:
                 continue
-            if str(epic_id) in self._huge_tpf.huge_ids:
-                continue
-                # This way we skip huge TPF files, though they can still be added via self.add_tpf_data().
+            if self._huge_tpf is not None:
+                if str(epic_id) in self._huge_tpf.huge_ids:
+                    continue
+                    # This way we skip huge TPF files, though they can still be added via self.add_tpf_data().
             new_tpf = tpfdata.TpfData(epic_id=epic_id, campaign=campaign)
             self.add_tpf_data(new_tpf)
             
