@@ -48,6 +48,14 @@ class MultipleTpf(object):
             self._predictor_epoch_mask = np.ones_like(tpf_data.epoch_mask, dtype=bool)
         self._predictor_epoch_mask &= tpf_data.epoch_mask
 
+    def tpf_for_epic_id(self, epic_id):
+        """returns an instance of TpfData corresponding to given epic_id"""
+        epic_id = str(epic_id)
+        if epic_id not in self._epic_ids:
+            raise ValueError('EPIC {:} not in the MultipleTpf instance'.format(epic_id))
+        index = self._epic_ids.index(epic_id)
+        return self._tpfs[index]   
+
     @property
     def predictor_epoch_mask(self):
         """predictor epoch mask"""
