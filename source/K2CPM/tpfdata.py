@@ -169,7 +169,6 @@ class TpfData(object):
 
     def get_flux_for_pixel(self, row, column, apply_epoch_mask=False):
         """extracts flux for a single pixel (all epochs) specified as row and column"""
-        print("GET_FLUX {:} {:} {:} {:}".format(row, column, self.check_pixel_covered(column, row), self._get_pixel_index(row, column)))
         if not self.check_pixel_covered(column, row):
             return None
         index = self._get_pixel_index(row, column)
