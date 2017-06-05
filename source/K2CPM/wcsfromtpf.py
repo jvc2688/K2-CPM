@@ -88,14 +88,30 @@ class WcsFromTpf(object):
         epics = np.array(self.sorted_epics)
         index = np.argsort(min_values, kind="mergesort")
         return (epics[index], min_values[index], max_values[index])
-        
+
+    def _get_selection(self, column, row):
+        """find indexes of all matches with given column and row"""
+        # selection = (self.pix_x == column) & (self.pix_y == row)
+        selection = (self.pix_x == column + 1) & (self.pix_y == row + 1)
+        if not np.any(selection):
+            msg = 'Wrong input in radec_for_pixel(): column = {:}, row = {:}'
+            raise ValueError(msg.format(column, row))
+        return selection
+
     def radec_for_pixel(self, column, row):
         """get RA & Dec (float format in deg.) for given pixel"""
-        selection = (self.pix_x == column) & (self.pix_y == row)
-        if not np.any(selection):
-            raise ValueError('Wrong input in radec_for_pixel(): column = {:}, row = {:}'.format(column, row))
+        selection = self._get_selection(column=column, row=row)
         return (self.ra[selection][0], self.dec[selection][0])
+        
+    def epic_for_pixel(self, column, row):
+        """get single EPIC id coresponding to given pixel"""
+        selection = self._get_selection(column=column, row=row)
+        return self.epic[selection][0]
 
+    def radec_and_epic_for_pixel(self, column, row):
+        """get radec and EPIC id (only one set) coresponding to given pixel"""
+        selection = self._get_selection(column=column, row=row)        
+        return (self.ra[selection][0], self.dec[selection][0], self.epic[selection][0])
 
 if __name__ == '__main__':
     """example usage"""

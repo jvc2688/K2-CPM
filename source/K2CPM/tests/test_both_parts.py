@@ -7,7 +7,7 @@ from K2CPM import tpfdata
 
 
 def do_test_cpm_part1_and_part2(n_test_compare, 
-        target_epic_num=200071074, campaign=92, 
+        target_epic_num=200071074, channel=52, campaign=92, 
         n_predictor=400, n_pca=0, distance=16, exclusion=5, 
         flux_lim=(0.2, 1.5), input_dir="tpf", 
         pixel_list=np.array([[883, 670]]), 
@@ -21,8 +21,7 @@ def do_test_cpm_part1_and_part2(n_test_compare,
 
     # run cpm_part1
     (predictor_matrixes, predictor_masks) = cpm_part1.run_cpm_part1(
-                            target_epic_num, 
-                            campaign, n_predictor, n_pca, 
+                            channel, campaign, n_predictor, n_pca, 
                             distance, exclusion, flux_lim, input_dir, 
                             pixel_list, train_lim, 
                             return_predictor_epoch_masks=True)

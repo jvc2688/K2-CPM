@@ -6,8 +6,8 @@ from K2CPM import cpm_part2 ##
 from K2CPM import matrix_xy
 
 
-def do_test_cpm_part1(n_test, target_epic_num=200071074, campaign=92, 
-        n_predictor=400, n_pca=0, distance=16, exclusion=5, 
+def do_test_cpm_part1(n_test, channel=52, 
+        campaign=92, n_predictor=400, n_pca=0, distance=16, exclusion=5, 
         flux_lim=(0.2, 1.5), input_dir="tpf", 
         pixel_list=np.array([[883, 670]]), train_lim=None):
     """basic function that runs run_cpm_part1() and checks results
@@ -20,7 +20,7 @@ def do_test_cpm_part1(n_test, target_epic_num=200071074, campaign=92,
         if os.path.isfile(file_name):
             os.remove(file_name)
 
-    cpm_part1.run_cpm_part1(target_epic_num, campaign, n_predictor, n_pca, 
+    cpm_part1.run_cpm_part1(channel, campaign, n_predictor, n_pca, 
                             distance, exclusion, flux_lim, input_dir, 
                             pixel_list, train_lim, output_file, output_file_mask)
                             

@@ -3,7 +3,8 @@ import numpy as np
 from K2CPM import leastSquareSolver as lss
 
 
-def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predictor_mask, l2, time, poly=0, ml=None):
+def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predictor_mask, 
+                        l2, time, poly=0, ml=None):
     """
     ## inputs:
     - `predictor_matrix` - matrix of predictor fluxes
@@ -33,17 +34,27 @@ def get_fit_matrix_ffi(target_flux, target_epoch_mask, predictor_matrix, predict
         p = np.polynomial.polynomial.polyvander(nor_time, poly)
         predictor_matrix = np.concatenate((predictor_matrix, p), axis=1)
 
+    # add model:
     if ml is not None:
-        predictor_matrix = np.concatenate((predictor_matrix, ml), axis=1)
+        if ml.size == len(epoch_mask):
+            add_ml = ml[epoch_mask]
+        elif ml.size == sum(epoch_mask):
+            add_ml = ml
+        else:
+            msg = 'Incorrect size of ml parameter of get_fit_matrix_ffi: {:} (expected {:} or {:})'
+            raise ValueError(msg.format(ml.size, len(epoch_mask), sum(epoch_mask)))
+        if add_ml.ndim == 1:
+            add_ml = np.array([add_ml]).T
+        predictor_matrix = np.concatenate((predictor_matrix, add_ml), axis=1)
 
-    #construct l2 vectors
+    #construct l2 vector
     l2_vector = np.ones(predictor_matrix.shape[1], dtype=float) * l2
-
     l2_vector[l2_length_of_ones:] = 0. # This ensures that there's no reguralization on concatenated models and polynomials. 
 
-    return target_flux, predictor_matrix, epoch_mask, l2_vector, time
+    return (target_flux, predictor_matrix, epoch_mask, l2_vector, time)
 
-def fit_target(target_flux, predictor_flux_matrix, time=None, covar_list=None, l2_vector=None, train_lim=None):
+def fit_target(target_flux, predictor_flux_matrix, time=None, covar_list=None, 
+                    l2_vector=None, train_lim=None):
     """
     ## inputs:
     - `predictor_flux_matrix` - fitting matrix of neighbor flux

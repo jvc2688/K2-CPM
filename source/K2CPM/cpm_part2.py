@@ -15,10 +15,10 @@ def read_true_false_file(file_name):
     return np.array(out)
 
 # TO_BE_DONE - use tpf_flux_err if user wants
-def cpm_part2(tpf_time, tpf_flux, tpf_flux_err, tpf_epoch_mask, predictor_matrix, predictor_mask, l2, train_lim=None):
+def cpm_part2(tpf_time, tpf_flux, tpf_flux_err, tpf_epoch_mask, predictor_matrix, predictor_mask, l2, train_lim=None, model=None):
     """get predictor_matrix, run CPM, calculate dot product and difference of target_flux and fit_flux"""
     # run get_fit_matrix_ffi() which mostly applies joint epoch_mask
-    fit_matrix_results = k2_cpm_small.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, predictor_matrix, predictor_mask, l2, tpf_time, 0, None)
+    fit_matrix_results = k2_cpm_small.get_fit_matrix_ffi(tpf_flux, tpf_epoch_mask, predictor_matrix, predictor_mask, l2, tpf_time, 0, ml=model)
     (target_flux, predictor_matrix, none_none, l2_vector, time) = fit_matrix_results
     
     # run CPM:

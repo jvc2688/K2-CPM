@@ -5,10 +5,13 @@ import warnings
 import numpy as np
 import urllib
 from sklearn.decomposition import PCA
+if sys.version_info[0] > 2:
+    from urllib.request import URLopener
+else:
+    from urllib import URLopener
 
 from astropy.io import fits as pyfits
 
-#import matrix_xy
 from K2CPM import matrix_xy
 
 
@@ -31,6 +34,7 @@ class TpfData(object):
         self._load_data(self._path)
         self._column = None
         self._row = None
+        self._pixel_list = None
 
     def _guess_file_name(self):
         """guesses file name based on epic_id and campaign"""
@@ -45,11 +49,9 @@ class TpfData(object):
         self.reference_column = hdu_list[2].header['CRVAL1P']
         self.reference_row = hdu_list[2].header['CRVAL2P']
         self.mask = hdu_list[2].data 
-        
-        self.columns = np.tile(np.arange(self.mask.shape[1], dtype=int), self.mask.shape[0]) + self.reference_column
-        self.columns = self.columns[self.mask.flatten()>0]
-        self.rows = np.repeat(np.arange(self.mask.shape[0], dtype=int), self.mask.shape[1]) + self.reference_row
-        self.rows = self.rows[self.mask.flatten()>0]
+        self.n_rows = self.mask.shape[0]
+        self.n_columns = self.mask.shape[1]
+        self.n_pixels = self.n_rows * self.n_columns
         
         data = hdu_list[1].data
         self.jd_short = data["time"] + 4833. # is it HJD, BJD, JD?
@@ -97,10 +99,7 @@ class TpfData(object):
         url_template = 'http://archive.stsci.edu/missions/k2/target_pixel_files/c{0:d}/{1:d}/{2:05d}/{3}'
         url_to_load = url_template.format(self.campaign, d1, d2, self.file_name)
         
-        if sys.version_info[0] > 2:
-            url_retriver = urllib.request.URLopener()
-        else:
-            url_retriver = urllib.URLopener()
+        url_retriver = URLopener()
         url_retriver.retrieve(url_to_load, self._path)
     
     @property
@@ -111,17 +110,20 @@ class TpfData(object):
     @property
     def pixel_list(self):
         """return array with a list of all pixels"""
-        shape = self.pixel_mask.shape
-        inside_coords = [np.repeat(np.arange(shape[0]), shape[1]), np.tile(np.arange(shape[1]), shape[0])]
-        return np.array(inside_coords, dtype=int).T + tpf_data.reference_pixel
+        if self._pixel_list is None:
+            inside_1 = np.repeat(np.arange(self.n_columns), self.n_rows)
+            inside_2 = np.tile(np.arange(self.n_rows), self.n_columns)
+            inside_coords = np.array([inside_1, inside_2], dtype=int).T
+            self._pixel_list = inside_coords + self.reference_pixel
+        return self._pixel_list
 
     def check_pixel_in_tpf(self, column, row):
         """check if given (column,row) pixel is inside the area covered by this TPF file"""
         d_column = column - self.reference_column
         d_row = row - self.reference_row
-        if (d_column < 0) or (d_column >= self.mask.shape[0]):
+        if (d_column < 0) or (d_column >= self.n_columns):
             return False
-        if (d_row < 0) or (d_row >= self.mask.shape[1]):
+        if (d_row < 0) or (d_row >= self.n_rows):
             return False
         return True
 
@@ -134,16 +136,30 @@ class TpfData(object):
         
     def _make_column_row_vectors(self):
         """prepare vectors with some numbers"""
-        self._column = np.tile(np.arange(self.mask.shape[1], dtype=int), self.mask.shape[0]) + self.reference_column
-        self._column = self._column[self.mask.flatten()>0]
-        self._row = np.repeat(np.arange(self.mask.shape[0], dtype=int), self.mask.shape[1]) + self.reference_row
-        self._row = self._row[self.mask.flatten()>0]
+        self._column = np.tile(np.arange(self.n_columns, dtype=int), self.n_rows) 
+        self._column = self._column[self.mask.flatten()>0] + self.reference_column
+        self._row = np.repeat(np.arange(self.n_rows, dtype=int), self.n_columns) 
+        self._row = self._row[self.mask.flatten()>0] + self.reference_row
+
+    @property
+    def rows(self):
+        """gives array that translates index pixel into row number"""
+        if self._row is None:
+            self._make_column_row_vectors()
+        return self._row
+
+    @property
+    def columns(self):
+        """gives array that translates index pixel into column number"""
+        if self._column is None:
+            self._make_column_row_vectors()
+        return self._column
 
     def _get_pixel_index(self, row, column):
         """finds index of given (row, column) pixel in given file - information necessary to extract flux"""
         if (self._row is None) or (self._column is None):
             self._make_column_row_vectors()
-        index = np.arange(self._row.shape[0])
+        index = np.arange(self.n_pixels)
         index_mask = ((self._row == row) & (self._column == column))
         try:
             out = index[index_mask][0]
@@ -198,8 +214,8 @@ class TpfData(object):
         target_index = self._get_pixel_index(target_x, target_y)
         pixel_mask = np.ones_like(self.pixel_row, dtype=bool)
 
-        target_col = self.columns[target_index]
-        target_row = self.rows[target_index]
+        target_col = self._column[target_index]
+        target_row = self._row[target_index]
         for pix in range(-excl, excl+1):
             pixel_mask &= (self.pixel_row != (target_row+pix))
             pixel_mask &= (self.pixel_col != (target_col+pix))

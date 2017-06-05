@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_matrix_subplots(figure, time, matrix, same_y_axis=True):
+def plot_matrix_subplots(figure, time, matrix, same_y_axis=True, data_mask=None):
     """
     Plot given 3D matrix in subpanels. Note that 3rd component of matrix.shape 
     must be the same as time.size i.e., matrix.shape[2]==time.size
@@ -22,14 +22,21 @@ def plot_matrix_subplots(figure, time, matrix, same_y_axis=True):
     time = tpf.jd_short
     matrix = tpf.get_fluxes_for_square(pix_y, pix_x, half_size=3) # 3 gives 7x7 sublots
     """
-    y_lim = [np.min(matrix), np.max(matrix)]
+    y_lim = [np.nanmin(matrix), np.nanmax(matrix)]
     (i_max, j_max, _) = matrix.shape
     panels = np.flipud(np.arange(i_max*j_max).reshape(i_max, j_max)) + 1
+    if data_mask is not None:
+        time = time[data_mask]
 
     for i in range(i_max):
         for j in range(j_max):
             ax = plt.subplot(i_max, j_max, panels[i, j])
-            ax.plot(time, matrix[i][j], '.k')
+            y_axis = matrix[i][j]
+            if data_mask is not None:
+                y_axis = y_axis[data_mask]
+                
+            ax.plot(time, y_axis, '.k')
+            
             if i != 0:
                 ax.get_xaxis().set_visible(False)
             if j != 0:
