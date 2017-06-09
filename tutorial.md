@@ -33,12 +33,11 @@ print(c9fov.pickAChannel(271.2826667, -26.9993333))
 49.0
 ```
 Now it's time to find 
-which TPF and which pixel is closest to the event -- this is only rough estimate 
-that is based on WCS information in TPF files. We start python and do:
+which pixel is closest to the event -- this is only rough estimate 
+that is based on WCS information in TPF files. We start python and type:
 
 ```python
 from K2CPM import wcsfromtpf
-import K2CPM
 
 ra = 271.2826667
 dec = -26.9993333
@@ -77,13 +76,12 @@ pix_y -= 1
 Now let's see these values:
 
 ```python
-msg = "pix_x = {:}\npix_y = {:}\nepic_id = {:}\nseparation = {:.1f} arcsec"
-print(msg.format(pix_x, pix_y, epic_id, separation.value))
+msg = "pix_x = {:}\npix_y = {:}\nseparation = {:.1f} arcsec"
+print(msg.format(pix_x, pix_y, separation.value))
 ```
 ```
 pix_x = 741
 pix_y = 679
-epic_id = 200070496
 separation = 1.9 arcsec
 ```
 
@@ -94,7 +92,9 @@ Here x runs from 13 to 1112, and y runs from 21 to 1044
 separation given above is < 4 arcsec, so the coordinates are from the right 
 channel. 
 
-We know which pixel we're interested in so now its time to prepare predictor matrix. Note that first time you run this code for given ```epic_id``` and ```campaign```, it will take some time to download the data. Run:
+We know which pixel we're interested in so now its time to prepare predictor matrix. 
+Note that first time you run this code for given ```campaign``` and given set of 
+pixels, it will take some time to download the data. Run:
 
 ```python
 from K2CPM.cpm_part1 import run_cpm_part1
@@ -110,7 +110,7 @@ tpf_dir = 'tpf/'
 pixel_list = np.array([[pix_y, pix_x]])
 
 (predictor_matrix_list, predictor_masks) = run_cpm_part1(
-		epic_id, campaign, n_predictor, n_pca, distance, exclusion, 
+		channel, campaign, n_predictor, n_pca, distance, exclusion, 
 		flux_lim, tpf_dir, pixel_list,
 		return_predictor_epoch_masks=True)
 
@@ -168,7 +168,8 @@ Next step is just running the cpm\_part2:
 
 ```python
 l2 = 1000.
-result = cpm_part2.cpm_part2(tpf_time, tpf_flux, tpf_flux_err, epoch_mask, predictor_matrix, predictor_mask, l2)
+result = cpm_part2.cpm_part2(tpf_time, tpf_flux, tpf_flux_err, epoch_mask, 
+                             predictor_matrix, predictor_mask, l2)
 ```
 
 At this point tuple ```result``` contains: 
@@ -193,8 +194,12 @@ outside given range. This can be achieved by providing train_lim keyword
 with a list that has the two limiting values e.g.:
 
 ```python
-result = cpm_part2.cpm_part2(tpf_time, tpf_flux, tpf_flux_err, epoch_mask, predictor_matrix, predictor_mask, l2, train_lim = [2457547., 2457550.])
+result = cpm_part2.cpm_part2(tpf_time, tpf_flux, tpf_flux_err, epoch_mask, 
+                             predictor_matrix, predictor_mask, l2, 
+			     train_lim = [2457547., 2457550.])
 ```
 
+The above procedure should be applied to other pixels in the vicinity and 
+the results should be combined.
 
-(C) Radek Poleski, revised May 2017
+(C) Radek Poleski, revised June 2017
