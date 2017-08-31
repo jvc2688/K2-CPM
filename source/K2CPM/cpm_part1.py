@@ -46,15 +46,14 @@ def run_cpm_part1(channel, campaign, num_predictor, num_pca, dis, excl,
     out_predictor_epoch_masks = []
 
     for pixel in pixel_list:
-        
         print(pixel[0], pixel[1])
-        (ra, dec, epic_id) = wcs.radec_and_epic_for_pixel(column=pixel[1], row=pixel[0])
+        epic_id = wcs.epic_for_pixel(row=pixel[0], column=pixel[1])
         tpf_data = m_tpfs.tpf_for_epic_id(epic_id)
         if not tpf_data.check_pixel_covered(row=pixel[0], column=pixel[1]):
-            msg = 'something went wrong in CPM part 1: {:} {:} {:} {:} {:}'
-            raise ValueError(msg.format(pixel[0], pixel[1], epic_id, ra, dec))
+            msg = 'something went wrong in CPM part 1: {:} {:} {:}'
+            raise ValueError(msg.format(pixel[0], pixel[1], epic_id))
         
-        (epics_to_use_all, _, _) = wcs.get_epics_around_radec(ra, dec)
+        (epics_to_use_all, _, _) = wcs.get_epics_around_pixel(row=pixel[0], column=pixel[1])
         epics_to_use = epics_to_use_all[:n_use] # THIS HAS TO BE CORRECTED
         m_tpfs.add_tpf_data_from_epic_list(epics_to_use, campaign)
         

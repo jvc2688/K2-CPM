@@ -209,7 +209,6 @@ class TpfData(object):
         """prepare predictor matrix"""
         (self.pixel_row, self.pixel_col) = multiple_tpfs.get_rows_columns(tpfs_epics)
         self.pixel_flux = multiple_tpfs.get_fluxes(tpfs_epics)
-        self.pixel_median = multiple_tpfs.get_median_fluxes(tpfs_epics)
 
         target_index = self._get_pixel_index(target_x, target_y)
         pixel_mask = np.ones_like(self.pixel_row, dtype=bool)
@@ -220,9 +219,11 @@ class TpfData(object):
             pixel_mask &= (self.pixel_row != (target_row+pix))
             pixel_mask &= (self.pixel_col != (target_col+pix))
 
-        mask_1 = (self.median[target_index]*flux_lim[0] <= self.pixel_median)
-        mask_2 = (self.median[target_index]*flux_lim[1] >= self.pixel_median)
-        pixel_mask &= (mask_1 & mask_2)
+        if flux_lim is not None:
+            pixel_median = multiple_tpfs.get_median_fluxes(tpfs_epics)
+            mask_1 = (self.median[target_index]*flux_lim[0] <= pixel_median)
+            mask_2 = (self.median[target_index]*flux_lim[1] >= pixel_median)
+            pixel_mask &= (mask_1 & mask_2)
 
         distance2_row = np.square(self.pixel_row[pixel_mask]-target_row)
         distance2_col = np.square(self.pixel_col[pixel_mask]-target_col)

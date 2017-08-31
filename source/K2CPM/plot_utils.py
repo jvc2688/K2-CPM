@@ -22,11 +22,23 @@ def plot_matrix_subplots(figure, time, matrix, same_y_axis=True, data_mask=None)
     time = tpf.jd_short
     matrix = tpf.get_fluxes_for_square(pix_y, pix_x, half_size=3) # 3 gives 7x7 sublots
     """
-    y_lim = [np.nanmin(matrix), np.nanmax(matrix)]
+    x_lim_expand = 0.06
+    y_lim_expand = 0.08
+
+    if data_mask is not None:
+        y_lim = [np.nanmin(matrix[:,:,data_mask]), np.nanmax(matrix[:,:,data_mask])]
+    else:    
+        y_lim = [np.nanmin(matrix), np.nanmax(matrix)]
+    d_y_lim = y_lim[1] - y_lim[0]  
+    y_lim[0] -= d_y_lim * y_lim_expand / 2.
+    y_lim[1] += d_y_lim * y_lim_expand / 2.
+
     (i_max, j_max, _) = matrix.shape
     panels = np.flipud(np.arange(i_max*j_max).reshape(i_max, j_max)) + 1
     if data_mask is not None:
         time = time[data_mask]
+    d_time = (max(time) - min(time)) * x_lim_expand / 2.
+    x_lim = [min(time)-d_time, max(time)+d_time]    
 
     for i in range(i_max):
         for j in range(j_max):
@@ -43,5 +55,7 @@ def plot_matrix_subplots(figure, time, matrix, same_y_axis=True, data_mask=None)
                 ax.get_yaxis().set_visible(False)
             if same_y_axis:
                 ax.set_ylim(y_lim)
+            ax.set_xlim(x_lim)
     figure.tight_layout()
     plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0, hspace=0)
+
