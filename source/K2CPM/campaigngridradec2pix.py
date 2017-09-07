@@ -72,6 +72,17 @@ class CampaignGridRaDec2Pix(object):
             out_2 = out_2[:,0]
         return (out_1, out_2)
 
+    def mean_position(self, ra, dec):
+        """for given (RA,Dec) calculate position for every epoch
+        and report weighted average"""
+        if not isinstance(ra, float) or not isinstance(dec, float):
+            raise TypeError('mean_position() arguments have to be floats')
+        (pixel_x, pixel_y) = self.apply_grids(ra=ra, dec=dec)
+        weights = np.array(self.sigma)**-2
+        mean_x = np.average(pixel_x, weights=weights)
+        mean_y = np.average(pixel_y, weights=weights)
+        return (mean_x, mean_y)
+
 
 # Example usage:
 if __name__ == "__main__":
@@ -85,4 +96,7 @@ if __name__ == "__main__":
 
     # Print Y positions of 0-th star on the list at all epochs:
     print(grids.apply_grids(ra_list, dec_list)[1][:,0])
+
+    # print mean position of 0-th star:
+    print(grids.mean_position(ra_list[0], dec_list[0]))
 
